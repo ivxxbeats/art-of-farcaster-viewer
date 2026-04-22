@@ -583,9 +583,37 @@
                         case "extreme": freqMultiplier = 22; break;
                         default: freqMultiplier = 8;
                     }
-                    let t = Math.sin((fractalVal + patternVal) * Math.PI * freqMultiplier / 8);
-                    t = (t + 1) / 2;
-                    t = Math.max(0.03, Math.min(0.97, t));
+                                            // ============================================================
+                        // ENGINE-SPECIFIC FIELD LAWS (Restored)
+                        // ============================================================
+                        let t;
+                        if (isRupture) {
+                            // Destructive interference
+                            t = Math.abs(fractalVal - patternVal) + Math.sin(rx * ry * 2.5) * 0.2;
+                        } else if (isEcho) {
+                            // Soft pattern-dominant resonance
+                            t = fractalVal * 0.35 + patternVal * 0.65;
+                            t = t * 0.8 + Math.sin(t * Math.PI * 2) * 0.2;
+                        } else {
+                            // Canonical: structured weighted blend
+                            t = fractalVal * 0.75 + patternVal * 0.25;
+                        }
+                        t = Math.max(0.03, Math.min(0.97, t));
+                        
+                        // Frequency Tiers (applied AFTER engine field)
+                        const frequencyTypes = ["low", "medium", "high", "extreme"];
+                        const freqIndex = tokenNum % 4;
+                        let freqMultiplier;
+                        switch(frequencyTypes[freqIndex]) {
+                            case "low": freqMultiplier = 3; break;
+                            case "medium": freqMultiplier = 6; break;
+                            case "high": freqMultiplier = 10; break;
+                            case "extreme": freqMultiplier = 16; break;
+                            default: freqMultiplier = 6;
+                        }
+                        t = Math.sin(t * Math.PI * freqMultiplier);
+                        t = (t + 1) / 2;
+                        t = Math.max(0.03, Math.min(0.97, t));
                     
                     // Boost structure contrast
                     t = Math.pow(t, 0.6);
