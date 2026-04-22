@@ -6,9 +6,27 @@
 function getTokenVisualSignature(seed, tokenId) {
     const tokenNum = parseInt(tokenId) || 1;
     let hash = tokenNum;
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
         hash = (hash * 9301 + 49297) % 233280;
     }
+    const extreme = (mod) => 0.2 + ((hash * mod) % 160) / 100;
+    return {
+        colorBias: { r: extreme(3), g: extreme(7), b: extreme(13) },
+        contrast: 0.3 + ((hash * 3) % 170) / 100,
+        brightness: 0.3 + ((hash * 5) % 120) / 100,
+        saturation: 0.2 + ((hash * 11) % 160) / 100,
+        distortion: ((hash * 17) % 60) / 100,
+        glitchIntensity: ((hash * 29) % 80) / 100,
+        zoomLevel: 0.5 + ((hash * 43) % 130) / 100,
+        waveFreq: 0.5 + ((hash * 53) % 200) / 100,
+        posterize: Math.floor(((hash * 59) % 16)),
+        redShift: ((hash * 61) % 50) / 100,
+        blueShift: ((hash * 67) % 50) / 100,
+        invertColors: ((hash * 71) % 100) > 80,
+        scanlineThick: ((hash * 73) % 50) / 100,
+        vignette: ((hash * 79) % 80) / 100
+    };
+}
     return {
         colorBias: { r: (hash % 100) / 100, g: ((hash * 7) % 100) / 100, b: ((hash * 13) % 100) / 100 },
         contrast: 0.6 + ((hash * 3) % 120) / 100,
