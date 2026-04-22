@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // ART OF FARCASTER - COMPLETE VIEWER
 // Full animation + Live Intensity + Awakened Engine + Complementary Traits + Flow State
 // ============================================================
@@ -97,7 +97,7 @@
     function updateComplementaryUI(complementary) {
         const infoEl = document.getElementById('complementaryInfo');
         if (infoEl) {
-            infoEl.innerHTML = `${complementary.mood} · ${complementary.element} · ${complementary.harmony} · ${complementary.flowState}`;
+            infoEl.innerHTML = `${complementary.mood} Â· ${complementary.element} Â· ${complementary.harmony} Â· ${complementary.flowState}`;
             infoEl.style.borderLeft = `3px solid ${complementary.flowColor}`;
         }
     }
@@ -117,7 +117,7 @@
                 if (liveIntensity > 0.8) awakenedLevel = "ascended";
                 else if (liveIntensity > 0.55) awakenedLevel = "awakened";
                 else awakenedLevel = "base";
-                console.log("💪 Intensity:", liveIntensity, "| Level:", awakenedLevel);
+                console.log("ðŸ’ª Intensity:", liveIntensity, "| Level:", awakenedLevel);
             })
             .catch(function(e) { console.log("Intensity fetch failed"); });
     }
@@ -239,7 +239,7 @@
         const colors = ["Ethereal", "ChromaticShift", "Volcanic", "StellarDrift", "Mystic", "QuantumWave", "Serene", "PhantomGlow"];
         const colorMood = colors[Math.floor(colorRNG() * colors.length)];
         
-        const compositions = ["Spiral", "Radial", "Kaleido", "FlowField", "Rotated"];
+        const compositions = ["Spiral", "Radial", "Kaleido", "FlowField", "Rotated"];\n        const fractals = ["Nova", "Julia", "Mandelbrot", "Barnsley", "Dragon"];\n        const fractalType = fractals[Math.floor(compRNG() * fractals.length)];
         const composition = compositions[Math.floor(compRNG() * compositions.length)];
         
         return {
@@ -249,7 +249,7 @@
             "Color Mood": colorMood,
             "Composition": composition,
             "Motion": "Flowing"
-        };
+        }\n            "Fractal Type": fractalType;
     }
     
     function generateBaseTraits(seed, tokenId) {
@@ -577,7 +577,7 @@
         tokenId = params.get('tokenId') || params.get('tid') || '1';
         const txHash = params.get('txHash') || params.get('h') || '0x0';
         
-        console.log("🎨 Token:", tokenId);
+        console.log("ðŸŽ¨ Token:", tokenId);
         
         masterSeed = getSeed(tokenId, txHash);
         currentTraits = generateCollectionTraits(masterSeed, tokenId);
@@ -594,7 +594,7 @@
         startTime = null;
         requestAnimationFrame(animate);
         
-        console.log("✅ Viewer ready - Token:", tokenId, "Traits:", currentTraits);
+        console.log("âœ… Viewer ready - Token:", tokenId, "Traits:", currentTraits);
     }
     
     if (document.readyState === 'loading') {
