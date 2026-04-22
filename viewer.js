@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // ART OF FARCASTER - VIEWER v21.0
 // Fixed: Variation guard runs AFTER Grail overrides
 // Grails get lighter fallback (82/18 vs 70/30)
@@ -410,7 +410,7 @@
     function updateComplementaryUI(complementary) {
         const infoEl = document.getElementById('complementaryInfo');
         if (infoEl) {
-            infoEl.innerHTML = `${complementary.engineType} · ${complementary.mood} · ${complementary.element} · Driver: ${complementary.primaryDriver}`;
+            infoEl.innerHTML = `${complementary.engineType} Â· ${complementary.mood} Â· ${complementary.element} Â· Driver: ${complementary.primaryDriver}`;
         }
     }
     
