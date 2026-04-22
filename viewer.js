@@ -1,13 +1,13 @@
 ﻿// ============================================================
-// ART OF FARCASTER - VIEWER (Matching mint script RNG)
-// Uses identical deterministic RNG as sketch.js
+// ART OF FARCASTER - VIEWER (EXACT MATCH to sketch.js)
+// Uses IDENTICAL trait generation and fractal engine
 // ============================================================
 
 (function() {
     "use strict";
     
     // ============================================================
-    // CONFIG (matching sketch.js)
+    // CONFIG (IDENTICAL to sketch.js)
     // ============================================================
     const PHASES = { CALM: 0, BUILDUP: 1, CHAOS: 2, DECAY: 3 };
     const LOG2 = Math.log(2);
@@ -28,7 +28,6 @@
     // ============================================================
     let liveIntensity = 0.5;
     let awakenedLevel = "base";
-    let animationTime = 0;
     
     function fetchIntensity() {
         var url = "https://raw.githubusercontent.com/ivxxbeats/farcaster-intensity/main/intensity.json";
@@ -39,7 +38,7 @@
                 if (liveIntensity > 0.8) awakenedLevel = "ascended";
                 else if (liveIntensity > 0.55) awakenedLevel = "awakened";
                 else awakenedLevel = "base";
-                console.log("💪 Intensity:", liveIntensity, "| Level:", awakenedLevel);
+                console.log("Intensity:", liveIntensity, "Level:", awakenedLevel);
             })
             .catch(function(e) { console.log("Intensity fetch failed"); });
     }
@@ -48,7 +47,6 @@
     // DETERMINISTIC HELPERS (IDENTICAL to sketch.js)
     // ============================================================
     
-    // Same getSeed function as sketch.js
     function getSeed(tokenId, txHash) {
         let hash = 2166136261;
         const str = `${txHash}_${tokenId}`;
@@ -59,7 +57,6 @@
         return hash >>> 0;
     }
     
-    // Same makeSeededRand as sketch.js
     function makeSeededRand(seed) {
         let state = seed >>> 0;
         return function() {
@@ -71,7 +68,6 @@
         };
     }
     
-    // Same splitSeed as sketch.js
     function splitSeed(seed, streamId) { 
         let state = (seed ^ (streamId * 0x9e3779b9)) >>> 0; 
         return function() { 
@@ -83,13 +79,11 @@
         }; 
     }
     
-    // Same deterministicTime as sketch.js
     function deterministicTime(tokenId, masterSeed, intensity) {
         const tokenNum = parseInt(tokenId, 10) || 0;
         return ((tokenNum * 0.0123456789) + (masterSeed * 0.0000001) + (intensity * 0.1)) % 1.0;
     }
     
-    // Same getDeterministicPhase as sketch.js
     function getDeterministicPhase(masterSeed, intensity) {
         return Math.floor((masterSeed + intensity * 10000)) % 4;
     }
@@ -98,7 +92,6 @@
     // TRAIT GENERATION (IDENTICAL to sketch.js)
     // ============================================================
     
-    // Same weightedPick as sketch.js
     function weightedPick(items, weights, rng) {
         const r = rng();
         let sum = 0;
@@ -109,7 +102,6 @@
         return items[items.length - 1];
     }
     
-    // Same rollRarityClass as sketch.js
     function rollRarityClass(rng) {
         return weightedPick(
             [RARITY_CLASSES.COMMON, RARITY_CLASSES.UNCOMMON, RARITY_CLASSES.RARE, RARITY_CLASSES.MYTHIC, RARITY_CLASSES.GRAIL],
@@ -118,7 +110,6 @@
         );
     }
     
-    // Same rollArchetype as sketch.js
     function rollArchetype(rarityClass, rng) {
         if (rarityClass === RARITY_CLASSES.GRAIL) {
             return weightedPick(ARCHETYPES, [0.12, 0.14, 0.18, 0.12, 0.28, 0.16], rng);
@@ -132,7 +123,6 @@
         }
     }
     
-    // Same rollAnchorForm as sketch.js
     function rollAnchorForm(archetype, rng) {
         switch (archetype) {
             case "Signal": return weightedPick(ANCHOR_FORMS, [0.10, 0.28, 0.08, 0.30, 0.18, 0.06], rng);
@@ -145,15 +135,14 @@
         }
     }
     
-    // Simplified trait generation for viewer (enough for visual consistency)
-    function generateTraits(seed, tokenId) {
-        // Create RNG streams matching sketch.js
+    function generateCollectionTraits(seed, tokenId) {
+        // Create RNG streams
         const streamRNGs = {};
         for(let i = 1; i <= 7; i++) {
             streamRNGs[i] = splitSeed(seed, i);
         }
         
-        // Apply token offset (matching sketch.js)
+        // Apply token offset
         const tokenOffset = parseInt(tokenId, 10) || 0;
         const steps = (tokenOffset * 997) % 1000;
         for (let i = 0; i < steps; i++) {
@@ -163,19 +152,20 @@
         }
         
         const traitsRNG = streamRNGs[1];
+        const colorRNG = streamRNGs[2];
+        const compRNG = streamRNGs[3];
         
-        // Generate traits using same logic as sketch.js
         const rarityClass = rollRarityClass(traitsRNG);
         const archetype = rollArchetype(rarityClass, traitsRNG);
         const anchorForm = rollAnchorForm(archetype, traitsRNG);
         
-        // Color pools matching sketch.js
+        // Color pools (matching sketch.js)
         const colors = ["Neon", "Electric", "Cyberpunk", "Aurora", "Ice", "Magma", "Cyanide", "Laser"];
-        const colorMood = colors[Math.floor(traitsRNG() * colors.length)];
+        const colorMood = colors[Math.floor(colorRNG() * colors.length)];
         
-        // Composition pools matching sketch.js
+        // Composition pools (matching sketch.js)
         const compositions = ["Spiral", "Radial", "Kaleido", "FlowField", "Rotated"];
-        const composition = compositions[Math.floor(traitsRNG() * compositions.length)];
+        const composition = compositions[Math.floor(compRNG() * compositions.length)];
         
         return {
             "Rarity Class": rarityClass,
@@ -187,7 +177,6 @@
         };
     }
     
-    // Same generateBaseTraits as sketch.js
     function generateBaseTraits(seed, tokenId) {
         const streamRNGs = {};
         for(let i = 1; i <= 7; i++) {
@@ -219,10 +208,11 @@
     let animatedGlitchX = 0;
     let animatedGlitchY = 0;
     let animatedWavePhase = 0;
+    let animationTime = 0;
+    let startTime = null;
     
     function updateAnimation(now) {
         const speed = awakenedLevel === "ascended" ? 1.5 : (awakenedLevel === "awakened" ? 1.2 : 1.0);
-        
         animatedPulse = 0.5 + Math.sin(now * 0.003 * speed) * 0.4;
         animatedHueShift = Math.sin(now * 0.0008 * speed) * 360 * 0.3;
         animatedGlitchX = Math.sin(now * 0.015) * 5;
@@ -231,7 +221,7 @@
     }
     
     // ============================================================
-    // FRACTAL ENGINES (matching sketch.js)
+    // FRACTAL ENGINES (IDENTICAL to sketch.js)
     // ============================================================
     function novaFractalCalc(x0, y0, maxIter) {
         let x = x0, y = y0;
@@ -302,10 +292,10 @@
         return { x, y };
     }
     
-    function getRichColor(t, colorMood, time, intensity) {
+    function getRichColor(t, colorMood, time) {
         let r, g, b;
-        const hueShift = animatedHueShift * 0.017;
         const pulse = animatedPulse;
+        const hueShift = animatedHueShift * 0.017;
         
         switch(colorMood) {
             case "Rainbow":
@@ -336,10 +326,12 @@
                 break;
         }
         
+        // Apply pulse
         r = Math.min(0.95, Math.max(0.05, r * pulse));
         g = Math.min(0.95, Math.max(0.05, g * pulse));
         b = Math.min(0.95, Math.max(0.05, b * pulse));
         
+        // Apply awakened boost
         const boost = awakenedLevel === "ascended" ? 1.3 : (awakenedLevel === "awakened" ? 1.15 : 1.0);
         
         return { 
@@ -356,7 +348,6 @@
         if (level === "ascended") {
             ctx.shadowBlur = 20;
             ctx.shadowColor = "rgba(255,100,255,0.5)";
-            
             for (var i = 0; i < 3; i++) {
                 ctx.beginPath();
                 ctx.arc(w/2, h/2, 100 + i * 40 + Math.sin(now * 0.003) * 10, 0, Math.PI * 2);
@@ -364,7 +355,6 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
             }
-            
             for (var i = 0; i < 60; i++) {
                 ctx.fillStyle = `rgba(255,100,255,${Math.random() * 0.3})`;
                 ctx.fillRect(Math.random() * w, Math.random() * h, 3, 3);
@@ -372,7 +362,6 @@
         } else if (level === "awakened") {
             ctx.shadowBlur = 10;
             ctx.shadowColor = "rgba(100,200,255,0.3)";
-            
             for (var i = 0; i < 30; i++) {
                 ctx.fillStyle = `rgba(100,200,255,${Math.random() * 0.2})`;
                 ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2);
@@ -393,7 +382,6 @@
     let deterministicPhase = 0;
     let canonicalTimeValue = 0;
     let tokenId = null;
-    let startTime = null;
     
     function updateOffscreen() {
         const newW = 420;
@@ -444,7 +432,7 @@
                     let t = (fractalVal + patternVal) * 0.5;
                     t = Math.max(0.03, Math.min(0.97, t));
                     
-                    let { r, g, b } = getRichColor(t, currentTraits["Color Mood"] || "Neon", time, liveIntensity);
+                    let { r, g, b } = getRichColor(t, currentTraits["Color Mood"] || "Neon", time);
                     
                     const idx = (y * w + x) * 4;
                     data[idx] = Math.min(255, Math.max(0, Math.floor(r * 255)));
@@ -494,10 +482,10 @@
         tokenId = params.get('tokenId') || params.get('tid') || '1';
         const txHash = params.get('txHash') || params.get('h') || '0x0';
         
-        console.log("🎨 Token:", tokenId);
+        console.log("Token:", tokenId);
         
         masterSeed = getSeed(tokenId, txHash);
-        currentTraits = generateTraits(masterSeed, tokenId);
+        currentTraits = generateCollectionTraits(masterSeed, tokenId);
         baseTraits = generateBaseTraits(masterSeed, tokenId);
         
         const intensityRand = makeSeededRand(masterSeed);
@@ -511,7 +499,7 @@
         startTime = null;
         requestAnimationFrame(animate);
         
-        console.log("✅ Viewer ready - Token:", tokenId, "Traits:", currentTraits);
+        console.log("Viewer ready - Token:", tokenId, "Traits:", currentTraits);
     }
     
     if (document.readyState === 'loading') {
