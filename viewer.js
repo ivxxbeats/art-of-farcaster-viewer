@@ -1,6 +1,6 @@
 ﻿// ============================================================
 // ART OF FARCASTER - COMPLETE VIEWER
-// Full animation + Live Intensity + Awakened Engine + Complementary Traits + Flow State
+// Matches sketch.js v8.0 with fractal variety
 // ============================================================
 
 (function() {
@@ -24,11 +24,10 @@
     const ANCHOR_FORMS = ["Aether", "PrismHeart", "Faultline", "Gate", "Nexus", "Bloom"];
     
     // ============================================================
-    // COMPLEMENTARY TRAITS (Viewer-only, not on-chain)
+    // COMPLEMENTARY TRAITS
     // ============================================================
     
     function getComplementaryTraits(rarityClass, awakenedLevel, intensity, tokenNum) {
-        // Mood based on intensity
         let mood = "Serene";
         if (intensity > 0.8) mood = "Intense";
         else if (intensity > 0.6) mood = "Energetic";
@@ -36,14 +35,11 @@
         else if (intensity > 0.2) mood = "Calm";
         else mood = "Dormant";
         
-        // Phase based on awakened level
         let phase = awakenedLevel.charAt(0).toUpperCase() + awakenedLevel.slice(1);
         
-        // Element based on token number
         const elements = ["Fire", "Water", "Earth", "Air", "Light", "Shadow", "Crystal", "Void"];
         const element = elements[tokenNum % elements.length];
         
-        // Density based on rarity
         let density = "Moderate";
         if (rarityClass === "Grail") density = "Overflowing";
         else if (rarityClass === "Mythic") density = "Dense";
@@ -51,53 +47,37 @@
         else if (rarityClass === "Uncommon") density = "Moderate";
         else density = "Sparse";
         
-        // Harmony based on intensity + rarity
         let harmony = "Balanced";
         if (intensity > 0.7 && rarityClass === "Grail") harmony = "Perfect";
         else if (intensity > 0.5) harmony = "Flowing";
         else harmony = "Still";
         
-        // ============================================================
-        // FLOW STATE (NEW!)
-        // Based on intensity + awakened level + rarity
-        // ============================================================
         let flowState = "Gentle";
-        if (awakenedLevel === "ascended") {
-            flowState = "Rapid";
-        } else if (awakenedLevel === "awakened") {
-            flowState = "Moving";
-        } else if (intensity > 0.7) {
-            flowState = "Surging";
-        } else if (intensity > 0.4) {
-            flowState = "Flowing";
-        } else {
-            flowState = "Gentle";
-        }
+        if (awakenedLevel === "ascended") flowState = "Rapid";
+        else if (awakenedLevel === "awakened") flowState = "Moving";
+        else if (intensity > 0.7) flowState = "Surging";
+        else if (intensity > 0.4) flowState = "Flowing";
+        else flowState = "Gentle";
         
-        // Flow substate for more detail
         let flowSubstate = "Steady";
         if (flowState === "Rapid") flowSubstate = "Turbulent";
         else if (flowState === "Surging") flowSubstate = "Pulsing";
         else if (flowState === "Flowing") flowSubstate = "Graceful";
         else flowSubstate = "Peaceful";
         
-        // Flow color based on flow state
         let flowColor = "#88aaff";
         if (flowState === "Rapid") flowColor = "#ff6688";
         else if (flowState === "Surging") flowColor = "#ffaa44";
         else if (flowState === "Flowing") flowColor = "#44ffaa";
         else flowColor = "#88aaff";
         
-        return { 
-            mood, phase, element, density, harmony,
-            flowState, flowSubstate, flowColor
-        };
+        return { mood, phase, element, density, harmony, flowState, flowSubstate, flowColor };
     }
     
     function updateComplementaryUI(complementary) {
         const infoEl = document.getElementById('complementaryInfo');
         if (infoEl) {
-            infoEl.innerHTML = `${complementary.mood} Â· ${complementary.element} Â· ${complementary.harmony} Â· ${complementary.flowState}`;
+            infoEl.innerHTML = `${complementary.mood} · ${complementary.element} · ${complementary.harmony} · ${complementary.flowState}`;
             infoEl.style.borderLeft = `3px solid ${complementary.flowColor}`;
         }
     }
@@ -117,7 +97,7 @@
                 if (liveIntensity > 0.8) awakenedLevel = "ascended";
                 else if (liveIntensity > 0.55) awakenedLevel = "awakened";
                 else awakenedLevel = "base";
-                console.log("ðŸ’ª Intensity:", liveIntensity, "| Level:", awakenedLevel);
+                console.log("💪 Intensity:", liveIntensity, "| Level:", awakenedLevel);
             })
             .catch(function(e) { console.log("Intensity fetch failed"); });
     }
@@ -239,8 +219,11 @@
         const colors = ["Ethereal", "ChromaticShift", "Volcanic", "StellarDrift", "Mystic", "QuantumWave", "Serene", "PhantomGlow"];
         const colorMood = colors[Math.floor(colorRNG() * colors.length)];
         
-        const compositions = ["Spiral", "Radial", "Kaleido", "FlowField", "Rotated"];\n        const fractals = ["Nova", "Julia", "Mandelbrot", "Barnsley", "Dragon"];\n        const fractalType = fractals[Math.floor(compRNG() * fractals.length)];
+        const compositions = ["Spiral", "Radial", "Kaleido", "FlowField", "Rotated"];
         const composition = compositions[Math.floor(compRNG() * compositions.length)];
+        
+        const fractals = ["Nova", "Julia", "Mandelbrot", "Barnsley", "Dragon", "Magnet"];
+        const fractalType = fractals[Math.floor(compRNG() * fractals.length)];
         
         return {
             "Rarity Class": rarityClass,
@@ -248,8 +231,9 @@
             "Anchor Form": anchorForm,
             "Color Mood": colorMood,
             "Composition": composition,
+            "Fractal Type": fractalType,
             "Motion": "Flowing"
-        }\n            "Fractal Type": fractalType;
+        };
     }
     
     function generateBaseTraits(seed, tokenId) {
@@ -267,11 +251,18 @@
         }
         
         const traitsRNG = streamRNGs[1];
+        const varietyRNG = streamRNGs[2];
+        
+        const zoomVariety = 0.3 + varietyRNG() * 2.2;
+        const offsetVarietyX = (varietyRNG() - 0.5) * 3.0;
+        const offsetVarietyY = (varietyRNG() - 0.5) * 3.0;
+        const iterVariety = 40 + Math.floor(varietyRNG() * 260);
+        
         return {
-            zoom: 0.7 + traitsRNG() * 1.2,
-            offsetX: (traitsRNG() - 0.5) * 1.0,
-            offsetY: (traitsRNG() - 0.5) * 1.0,
-            baseMaxIter: 80 + Math.floor(traitsRNG() * 160)
+            zoom: (0.7 + traitsRNG() * 1.2) * zoomVariety,
+            offsetX: (traitsRNG() - 0.5) * 1.0 + offsetVarietyX,
+            offsetY: (traitsRNG() - 0.5) * 1.0 + offsetVarietyY,
+            baseMaxIter: 80 + Math.floor(traitsRNG() * 160) + iterVariety
         };
     }
     
@@ -283,7 +274,6 @@
     let animatedGlitchX = 0;
     let animatedGlitchY = 0;
     let animatedWavePhase = 0;
-    let animationTime = 0;
     let startTime = null;
     
     function updateAnimation(now) {
@@ -296,7 +286,7 @@
     }
     
     // ============================================================
-    // FRACTAL ENGINES
+    // FRACTAL ENGINES (Matching sketch.js)
     // ============================================================
     function novaFractalCalc(x0, y0, maxIter) {
         let x = x0, y = y0;
@@ -321,11 +311,25 @@
         return smooth < 0.02 ? 0.02 : smooth > 0.98 ? 0.98 : smooth;
     }
     
-    function getDepthFractalValue(x, y, maxIter) {
+    function getFractalTypeMultiplier(fractalType) {
+        switch(fractalType) {
+            case "Nova": return { xScale: 1.0, yScale: 1.0 };
+            case "Julia": return { xScale: 1.2, yScale: 1.2 };
+            case "Mandelbrot": return { xScale: 0.8, yScale: 0.8 };
+            case "Barnsley": return { xScale: 1.5, yScale: 0.5 };
+            case "Dragon": return { xScale: 1.1, yScale: 1.1 };
+            case "Magnet": return { xScale: 0.9, yScale: 0.9 };
+            default: return { xScale: 1.0, yScale: 1.0 };
+        }
+    }
+    
+    function getDepthFractalValue(x, y, maxIter, fractalType) {
+        const multi = getFractalTypeMultiplier(fractalType);
         let depth = 0;
         for (let i = 0; i < 3; i++) {
-            const scale = 1 + i * 0.15;
-            depth += novaFractalCalc(x * scale, y * scale, Math.floor(maxIter * 0.8));
+            const scale = (1 + i * 0.15) * multi.xScale;
+            const yScale = (1 + i * 0.12) * multi.yScale;
+            depth += novaFractalCalc(x * scale, y * yScale, Math.floor(maxIter * 0.7));
         }
         return depth / 3;
     }
@@ -503,7 +507,6 @@
             const offsetY = baseTraits?.offsetY || 0;
             const maxIter = baseTraits?.baseMaxIter || 120;
             
-            // Get complementary traits
             const tokenNum = parseInt(tokenId) || 1;
             const complementary = getComplementaryTraits(currentTraits["Rarity Class"], awakenedLevel, liveIntensity, tokenNum);
             updateComplementaryUI(complementary);
@@ -521,7 +524,7 @@
                     let rx = transformed.x;
                     let ry = transformed.y;
                     
-                    let fractalVal = getDepthFractalValue(rx, ry, maxIter);
+                    let fractalVal = getDepthFractalValue(rx, ry, maxIter, currentTraits["Fractal Type"]);
                     let patternVal = getPatternValue(rx, ry, time);
                     
                     let t = (fractalVal + patternVal) * 0.5;
@@ -577,7 +580,7 @@
         tokenId = params.get('tokenId') || params.get('tid') || '1';
         const txHash = params.get('txHash') || params.get('h') || '0x0';
         
-        console.log("ðŸŽ¨ Token:", tokenId);
+        console.log("🎨 Token:", tokenId);
         
         masterSeed = getSeed(tokenId, txHash);
         currentTraits = generateCollectionTraits(masterSeed, tokenId);
@@ -594,7 +597,7 @@
         startTime = null;
         requestAnimationFrame(animate);
         
-        console.log("âœ… Viewer ready - Token:", tokenId, "Traits:", currentTraits);
+        console.log("✅ Viewer ready - Token:", tokenId, "Traits:", currentTraits);
     }
     
     if (document.readyState === 'loading') {
