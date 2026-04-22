@@ -297,29 +297,46 @@
         const pulse = animatedPulse;
         const hueShift = animatedHueShift * 0.017;
         
-        switch(colorMood) {
-            case "Rainbow":
-                r = Math.sin(t * 20 + time + hueShift) * 0.8 + 0.8;
-                g = Math.sin(t * 20 + 2.094 + time * 1.2 + hueShift) * 0.8 + 0.8;
-                b = Math.sin(t * 20 + 4.188 + time * 0.8 + hueShift) * 0.8 + 0.8;
+        switch(colorMood) {            case "Ethereal":
+                r = 0.6 + 0.4 * Math.sin(t * 8 + time);
+                g = 0.3 + 0.5 * Math.sin(t * 10 + time * 1.1);
+                b = 0.9 + 0.1 * Math.sin(t * 12 + time * 0.9);
                 break;
-            case "Fire":
+            case "ChromaticShift":
+                r = Math.sin(t * 25 + time) * 0.9 + 0.5;
+                g = Math.sin(t * 25 + 2.094 + time * 1.3) * 0.9 + 0.5;
+                b = Math.sin(t * 25 + 4.188 + time * 0.7) * 0.9 + 0.5;
+                break;
+            case "Volcanic":
                 r = 1.0;
-                g = 0.2 + 0.6 * Math.sin(t * 12 + time);
+                g = 0.1 + 0.8 * Math.sin(t * 12 + time * 1.5);
                 b = 0.0;
                 break;
-            case "Aurora":
-                r = 0.1 + 0.3 * Math.sin(t * 5 + time);
-                g = 0.3 + 0.7 * Math.sin(t * 8 + time * 1.1);
-                b = 0.6 + 0.4 * Math.sin(t * 10 + time * 0.9);
+            case "StellarDrift":
+                r = 0.2 + 0.6 * Math.sin(t * 6 + time * 0.8);
+                g = 0.1 + 0.5 * Math.sin(t * 8 + time);
+                b = 0.8 + 0.2 * Math.sin(t * 10 + time * 1.2);
                 break;
-            case "Ice":
-                r = 0.1 + 0.2 * Math.sin(t * 6 + time);
-                g = 0.4 + 0.4 * Math.sin(t * 8 + time);
-                b = 0.9 + 0.1 * Math.sin(t * 10 + time * 1.2);
+            case "Mystic":
+                r = 0.7 + 0.3 * Math.sin(t * 9 + time * 0.7);
+                g = 0.2 + 0.6 * Math.sin(t * 11 + time * 1.1);
+                b = 0.9 + 0.1 * Math.sin(t * 13 + time * 0.5);
                 break;
-            case "Neon":
-            default:
+            case "QuantumWave":
+                r = Math.sin(t * 30 + time * 2) * 0.5 + 0.5;
+                g = Math.sin(t * 30 + 2.094 + time * 1.8) * 0.5 + 0.5;
+                b = Math.sin(t * 30 + 4.188 + time * 2.2) * 0.5 + 0.5;
+                break;
+            case "Serene":
+                r = 0.1 + 0.4 * Math.sin(t * 5 + time * 0.5);
+                g = 0.4 + 0.4 * Math.sin(t * 7 + time * 0.7);
+                b = 0.8 + 0.2 * Math.sin(t * 9 + time * 0.9);
+                break;
+            case "PhantomGlow":
+                r = 0.9 + 0.1 * Math.sin(t * 15 + time * 1.2);
+                g = 0.3 + 0.5 * Math.sin(t * 18 + time * 1.5);
+                b = 0.7 + 0.3 * Math.sin(t * 20 + time * 0.8);
+                break;default:
                 r = 0.0 + 1.0 * Math.sin(t * 8 + time);
                 g = 0.0 + 1.0 * Math.cos(t * 10 + time * 1.2);
                 b = 0.2 + 0.8 * Math.sin(t * 12 + time * 0.8);
