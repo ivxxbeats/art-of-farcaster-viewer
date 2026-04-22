@@ -568,20 +568,7 @@
                     // ============================================================
                     // VARIATION GUARD (prevents flat/dead images)
                     // ============================================================
-                    let variation = Math.abs(fractalVal - patternVal);
                     
-                    // Inject controlled noise for low variation
-                    if (variation < 0.02) {
-                        t += (Math.sin(rx * 12.3 + ry * 7.1) * 0.5 + 0.5) * 0.15;
-                    }
-                    
-                    // Blend fallback structure for extremely uniform fields
-                    if (variation < 0.01) {
-                        const fallback = Math.sin(rx * 8 + ry * 8) * 0.5 + 0.5;
-                        t = t * 0.7 + fallback * 0.3;
-                    }
-                    
-                    t = Math.max(0.03, Math.min(0.97, t));
                         t = Math.pow(t, 0.3);
                     
                     t = signatureContrast(t);
