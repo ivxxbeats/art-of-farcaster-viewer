@@ -160,7 +160,7 @@
         const anchorForm = rollAnchorForm(archetype, traitsRNG);
         
         // Color pools (matching sketch.js)
-        const colors = ["Neon", "Electric", "Cyberpunk", "Aurora", "Ice", "Magma", "Cyanide", "Laser"];
+        const colors = ["Ethereal", "ChromaticShift", "Volcanic", "StellarDrift", "Mystic", "QuantumWave", "Serene", "PhantomGlow"];
         const colorMood = colors[Math.floor(colorRNG() * colors.length)];
         
         // Composition pools (matching sketch.js)
