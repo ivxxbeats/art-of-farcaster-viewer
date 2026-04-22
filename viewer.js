@@ -1,10 +1,30 @@
-﻿// ============================================================
-// ART OF FARCASTER - VIEWER v19.1 (OPTIMIZED)
-// Matches mint performance: 320x320 offscreen, reduced operations
+// ============================================================
+// ART OF FARCASTER - VIEWER v20.1
+// Fixed: signature functions, clean Grail block, variation guard
 // ============================================================
 
 (function() {
     "use strict";
+    
+    // ============================================================
+    // SIGNATURE SYSTEM FUNCTIONS
+    // ============================================================
+    
+    function signatureColor(t, time) {
+        const base = t * 30 + time;
+        const r = Math.sin(base) * 0.5 + 0.5;
+        const g = Math.sin(base + 2.094) * 0.5 + 0.5;
+        const b = Math.sin(base + 4.188) * 0.5 + 0.5;
+        return { r, g, b };
+    }
+    
+    function signatureContrast(t) {
+        const k = 6.0;
+        let result = 1.0 / (1.0 + Math.exp(-k * (t - 0.5)));
+        const ridge = Math.abs(Math.sin(t * Math.PI));
+        result = result * 0.9 + ridge * 0.1;
+        return Math.max(0.02, Math.min(0.98, result));
+    }
     
     // ============================================================
     // CONFIG
@@ -38,6 +58,27 @@
             if (r < sum) return items[i];
         }
         return items[items.length - 1];
+    }
+    
+    // ============================================================
+    // ANOMALY CLASS
+    // ============================================================
+    const ANOMALY_CLASSES = ["Interference", "Collapse", "EchoLoop", "SpectralSplit"];
+    
+    // ============================================================
+    // ENGINE CONFIGURATION
+    // ============================================================
+    function getEngineConfig(engineType) {
+        switch (engineType) {
+            case "Canonical":
+                return { fractalWeight: 0.7, patternWeight: 0.3, allowedCompositions: ["Radial", "Spiral", "Kaleido"], name: "Canonical" };
+            case "Echo":
+                return { fractalWeight: 0.35, patternWeight: 0.65, allowedCompositions: ["FlowField", "Vortex", "Asymmetrical"], name: "Echo" };
+            case "Rupture":
+                return { fractalWeight: 0.5, patternWeight: 0.5, allowedCompositions: ["Asymmetrical", "Vortex", "Radial"], name: "Rupture" };
+            default:
+                return { fractalWeight: 0.5, patternWeight: 0.5, allowedCompositions: ["Radial"], name: "Canonical" };
+        }
     }
     
     // ============================================================
@@ -104,22 +145,6 @@
     }
     
     // ============================================================
-    // ENGINE CONFIGURATION
-    // ============================================================
-    function getEngineConfig(engineType) {
-        switch (engineType) {
-            case "Canonical":
-                return { fractalWeight: 0.7, patternWeight: 0.3, allowedCompositions: ["Radial", "Spiral", "Kaleido"], name: "Canonical" };
-            case "Echo":
-                return { fractalWeight: 0.35, patternWeight: 0.65, allowedCompositions: ["FlowField", "Vortex", "Asymmetrical"], name: "Echo" };
-            case "Rupture":
-                return { fractalWeight: 0.5, patternWeight: 0.5, allowedCompositions: ["Asymmetrical", "Vortex", "Radial"], name: "Rupture" };
-            default:
-                return { fractalWeight: 0.5, patternWeight: 0.5, allowedCompositions: ["Radial"], name: "Canonical" };
-        }
-    }
-    
-    // ============================================================
     // TRAIT GENERATION
     // ============================================================
     function rollRarityClass(rng) {
@@ -181,7 +206,7 @@
         };
         
         if (rarityClass === "Grail") {
-            traits["Anomaly Class"] = weightedPick(["Interference", "Collapse", "EchoLoop", "SpectralSplit"], [0.25, 0.25, 0.25, 0.25], rng);
+            traits["Anomaly Class"] = weightedPick(ANOMALY_CLASSES, [0.25, 0.25, 0.25, 0.25], rng);
         }
         
         return traits;
@@ -391,11 +416,9 @@
     // ============================================================
     // INTENSITY EFFECTS (Lightweight)
     // ============================================================
-    let lastFrameTime = 0;
     let frameCount = 0;
     
     function applyIntensityEffects(ctx, w, h, intensity, now) {
-        // Only apply every 4th frame for performance
         frameCount++;
         if (frameCount % 4 !== 0) return;
         
@@ -409,13 +432,11 @@
             }
         }
         
-        // Glitch - reduced frequency
         if (Math.random() < 0.002 * intensity) {
             const shiftX = (Math.random() - 0.5) * 2;
             ctx.drawImage(ctx.canvas, shiftX, 0);
         }
         
-        // Vignette - lightweight
         if (intensity > 0.3) {
             const vignetteStrength = intensity * 0.08;
             const gradient = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
@@ -426,7 +447,6 @@
             ctx.fillRect(0, 0, w, h);
         }
         
-        // Intensity meter
         ctx.fillStyle = "rgba(0,0,0,0.5)";
         ctx.fillRect(10, 670, 100, 4);
         ctx.fillStyle = `hsl(${intensity * 120}, 100%, 50%)`;
@@ -434,7 +454,7 @@
     }
     
     // ============================================================
-    // RENDER ENGINE (Optimized - 320x320, matches mint)
+    // RENDER ENGINE (Optimized - 320x320)
     // ============================================================
     let canvas, ctx;
     let offscreen, offCtx;
@@ -445,9 +465,10 @@
     let deterministicPhase = 0;
     let canonicalTimeValue = 0;
     let tokenId = null;
-    let animationId = null;
     let startTime = null;
-    let frameTime = 0;
+    let animationId = null;
+    
+    let animatedPulse = 0.96;
     
     function updateOffscreen() {
         const newW = 320;
@@ -462,14 +483,9 @@
         h = offscreen.height;
     }
     
-    // Gentle animation (lightweight)
-    let animatedPulse = 0.96;
-    let animTime = 0;
-    
     function renderFrame(now) {
         if (!currentTraits || !ctx) return;
         
-        animTime = now;
         animatedPulse = 0.96 + Math.sin(now * 0.0005) * 0.02;
         
         try {
@@ -479,8 +495,8 @@
             const intensity = liveIntensity;
             const time = canonicalTimeValue + now * 0.001;
             const zoom = baseTraits?.zoom || 1.0;
-            const offsetX = baseTraits?.offsetX || 0;
-            const offsetY = baseTraits?.offsetY || 0;
+            let offsetX = baseTraits?.offsetX || 0;
+            let offsetY = baseTraits?.offsetY || 0;
             const maxIter = baseTraits?.baseMaxIter || 120;
             const layers = baseTraits?.layers || 3;
             const iterMult = baseTraits?.iterMult || 1.0;
@@ -560,19 +576,18 @@
                     t = Math.max(0.03, Math.min(0.97, t));
                     
                     if (isGrailFlag && anomalyClass) {
-                        if (anomalyClass === "Interference") t = Math.abs(fractalVal - patternVal);
-                        else if (anomalyClass === "Collapse") t = Math.min(fractalVal, patternVal);
-                        else if (anomalyClass === "EchoLoop") t += Math.sin(t * 10) * 0.3;
+                        if (anomalyClass === "Interference") {
+                            t = Math.abs(fractalVal - patternVal);
+                        } else if (anomalyClass === "Collapse") {
+                            t = Math.min(fractalVal, patternVal);
+                        } else if (anomalyClass === "EchoLoop") {
+                            t += Math.sin(t * 10) * 0.3;
+                        }
                         t = Math.max(0.03, Math.min(0.97, t));
-                    
-                    // ============================================================
-                    // VARIATION GUARD (prevents flat/dead images)
-                    // ============================================================
-                    
                         t = Math.pow(t, 0.3);
+                    }
                     
                     t = signatureContrast(t);
-                    }
                     
                     let { r, g, b } = getRichColor(t, currentTraits["Color Mood"] || "Neon", time, primaryDriver);
                     
@@ -582,7 +597,6 @@
                     g = g * 0.7 + sigColor.g * 0.3;
                     b = b * 0.7 + sigColor.b * 0.3;
                     
-                    // Apply gentle pulse
                     r = r * animatedPulse;
                     g = g * animatedPulse;
                     b = b * animatedPulse;
