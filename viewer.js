@@ -213,10 +213,10 @@
     
     function updateAnimation(now) {
         const speed = awakenedLevel === "ascended" ? 1.5 : (awakenedLevel === "awakened" ? 1.2 : 1.0);
-        animatedPulse = 0.5 + Math.sin(now * 0.003 * speed) * 0.4;
-        animatedHueShift = Math.sin(now * 0.0008 * speed) * 360 * 0.3;
-        animatedGlitchX = Math.sin(now * 0.015) * 5;
-        animatedGlitchY = Math.cos(now * 0.012) * 4;
+        animatedPulse = 0.7 + Math.sin(now * 0.002 * speed) * 0.15;
+        animatedHueShift = Math.sin(now * 0.0005 * speed) * 360 * 0.1;
+        animatedGlitchX = Math.sin(now * 0.01) * 2;
+        animatedGlitchY = Math.cos(now * 0.008) * 1.5;
         animatedWavePhase = (animatedWavePhase + 0.03 * speed) % (Math.PI * 2);
     }
     
@@ -349,7 +349,7 @@
         b = Math.min(0.95, Math.max(0.05, b * pulse));
         
         // Apply awakened boost
-        const boost = awakenedLevel === "ascended" ? 1.3 : (awakenedLevel === "awakened" ? 1.15 : 1.0);
+        const boost = awakenedLevel === "ascended" ? 1.1 : (awakenedLevel === "awakened" ? 1.05 : 1.0);
         
         return { 
             r: Math.min(0.95, r * boost), 
@@ -363,23 +363,23 @@
     // ============================================================
     function applyAwakenedEffects(ctx, w, h, level, intensity, now) {
         if (level === "ascended") {
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = "rgba(255,100,255,0.5)";
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = "rgba(255,150,255,0.2)";
             for (var i = 0; i < 3; i++) {
                 ctx.beginPath();
                 ctx.arc(w/2, h/2, 100 + i * 40 + Math.sin(now * 0.003) * 10, 0, Math.PI * 2);
-                ctx.strokeStyle = `hsla(${now * 0.05 % 360}, 100%, 60%, 0.3)`;
+                ctx.strokeStyle = `hsla(${now * 0.03 % 360}, 100%, 60%, 0.15)`;
                 ctx.lineWidth = 2;
                 ctx.stroke();
             }
-            for (var i = 0; i < 60; i++) {
+            for (var i = 0; i < 25; i++) {
                 ctx.fillStyle = `rgba(255,100,255,${Math.random() * 0.3})`;
                 ctx.fillRect(Math.random() * w, Math.random() * h, 3, 3);
             }
         } else if (level === "awakened") {
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = "rgba(100,200,255,0.3)";
-            for (var i = 0; i < 30; i++) {
+            ctx.shadowBlur = 4;
+            ctx.shadowColor = "rgba(100,150,255,0.15)";
+            for (var i = 0; i < 15; i++) {
                 ctx.fillStyle = `rgba(100,200,255,${Math.random() * 0.2})`;
                 ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2);
             }
@@ -466,7 +466,7 @@
             applyAwakenedEffects(ctx, 700, 700, awakenedLevel, liveIntensity, now);
             
             if (isGrail) {
-                for (var i = 0; i < 50; i++) {
+                for (var i = 0; i < 20; i++) {
                     ctx.fillStyle = `hsla(${now * 0.05 % 360}, 100%, 60%, 0.25)`;
                     ctx.fillRect(Math.random() * 700, Math.random() * 700, 4, 4);
                 }
