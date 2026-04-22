@@ -1,6 +1,6 @@
-﻿// ============================================================
-// ART OF FARCASTER - VIEWER v25.0
-// Engine-specific field laws + Animation + Live Intensity
+// ============================================================
+// ART OF FARCASTER - VIEWER v26.0
+// Engine-specific frequency, contrast, color, and Grail manifestations
 // ============================================================
 
 (function() {
@@ -23,6 +23,51 @@
         const ridge = Math.abs(Math.sin(t * Math.PI));
         result = result * 0.9 + ridge * 0.1;
         return Math.max(0.02, Math.min(0.98, result));
+    }
+    
+    // ============================================================
+    // ENGINE-SPECIFIC SHAPING FUNCTIONS
+    // ============================================================
+    
+    function engineFrequencyShape(t, engineName, freqMultiplier) {
+        let out;
+        if (engineName === "Canonical") {
+            out = Math.sin(t * Math.PI * freqMultiplier * 0.8);
+            out = (out + 1) / 2;
+        } else if (engineName === "Echo") {
+            const a = Math.sin(t * Math.PI * freqMultiplier * 0.55);
+            const b = Math.cos(t * Math.PI * 2.0);
+            out = (a * 0.65 + b * 0.35 + 1) / 2;
+        } else {
+            out = Math.sin(t * Math.PI * freqMultiplier * 1.35);
+            out = (out + 1) / 2;
+        }
+        return Math.max(0.03, Math.min(0.97, out));
+    }
+    
+    function engineContrastShape(t, engineName) {
+        const s = signatureContrast(t);
+        if (engineName === "Canonical") return Math.pow(s, 0.92);
+        if (engineName === "Echo") return Math.pow(s, 1.12);
+        return Math.pow(s, 0.68); // Rupture
+    }
+    
+    function engineColorDiscipline(r, g, b, engineName, t, time) {
+        if (engineName === "Canonical") {
+            return { r: r * 0.96, g: g * 0.96, b: b * 0.96 };
+        }
+        if (engineName === "Echo") {
+            return {
+                r: r * 0.92 + (Math.sin(time + t * 4) * 0.5 + 0.5) * 0.08,
+                g: g * 0.92 + (Math.sin(time + 2.094 + t * 4) * 0.5 + 0.5) * 0.08,
+                b: b * 0.92 + (Math.sin(time + 4.188 + t * 4) * 0.5 + 0.5) * 0.08
+            };
+        }
+        return {
+            r: Math.min(1, r * 1.06),
+            g: g * 0.88,
+            b: Math.min(1, b * 1.03)
+        };
     }
     
     // ============================================================
@@ -419,7 +464,6 @@
             const data = imgData.data;
             const intensity = liveIntensity;
             const frozenTime = canonicalTimeValue;
-            const animTime = now * 0.0015;
             const zoom = baseTraits?.zoom || 1.0;
             let offsetX = baseTraits?.offsetX || 0;
             let offsetY = baseTraits?.offsetY || 0;
@@ -485,37 +529,60 @@
                     }
                     t = Math.max(0.03, Math.min(0.97, t));
                     
-                    // Frequency Tiers
+                    // Frequency Tiers with engine-specific shaping
+                    const frequencyTypes = ["low", "medium", "high", "extreme"];
                     const freqIndex = tokenNum % 4;
                     let freqMultiplier;
-                    if (freqIndex === 0) freqMultiplier = 3;
-                    else if (freqIndex === 1) freqMultiplier = 6;
-                    else if (freqIndex === 2) freqMultiplier = 10;
-                    else freqMultiplier = 16;
-                    
-                    t = Math.sin(t * Math.PI * freqMultiplier);
-                    t = (t + 1) / 2;
-                    t = Math.max(0.03, Math.min(0.97, t));
+                    switch (frequencyTypes[freqIndex]) {
+                        case "low": freqMultiplier = 3; break;
+                        case "medium": freqMultiplier = 6; break;
+                        case "high": freqMultiplier = 10; break;
+                        case "extreme": freqMultiplier = 16; break;
+                        default: freqMultiplier = 6;
+                    }
+                    t = engineFrequencyShape(t, engineConfig.name, freqMultiplier);
                     
                     t = Math.pow(t, 0.6);
                     
-                    // GRAIL ANOMALY
+                    // GRAIL ANOMALY - Engine-specific manifestations
                     if (isGrailFlag && anomalyClass) {
                         if (anomalyClass === "Interference") {
-                            let t2 = Math.sin((fractalVal + patternVal) * Math.PI * 18 / 8);
-                            t2 = (t2 + 1) / 2;
-                            t = (t + t2) / 2;
+                            if (engineConfig.name === "Canonical") {
+                                const t2 = Math.sin((fractalVal + patternVal) * Math.PI * 12 / 8);
+                                t = (t + ((t2 + 1) / 2)) * 0.5;
+                            } else if (engineConfig.name === "Echo") {
+                                const echoMix = Math.cos((fractalVal * 0.6 + patternVal * 1.4) * Math.PI * 2.5);
+                                t = t * 0.65 + ((echoMix + 1) / 2) * 0.35;
+                            } else {
+                                const t2 = Math.sin((fractalVal - patternVal) * Math.PI * 20);
+                                t = Math.abs(t - ((t2 + 1) / 2));
+                            }
                         } else if (anomalyClass === "Collapse") {
-                            let r_center = Math.sqrt((rx-0.5)*(rx-0.5) + (ry-0.5)*(ry-0.5));
-                            let collapse = Math.max(0, 1 - r_center * 2);
-                            t = t * (1 - collapse * 0.7);
+                            const rc = Math.sqrt((rx - 0.5) * (rx - 0.5) + (ry - 0.5) * (ry - 0.5));
+                            const collapse = Math.max(0, 1 - rc * 2);
+                            if (engineConfig.name === "Canonical") {
+                                t = t * (1 - collapse * 0.55);
+                            } else if (engineConfig.name === "Echo") {
+                                t = t * (1 - collapse * 0.35) + collapse * 0.15;
+                            } else {
+                                t = t * (1 - collapse * 0.85);
+                            }
                         } else if (anomalyClass === "EchoLoop") {
-                            let r_ring = Math.sqrt(rx*rx + ry*ry);
-                            let ring = Math.sin(r_ring * 15) * 0.3;
-                            t = t * 0.7 + ring * 0.3;
+                            const rr = Math.sqrt(rx * rx + ry * ry);
+                            const ring = Math.sin(rr * 15) * 0.3;
+                            if (engineConfig.name === "Canonical") {
+                                t = t * 0.78 + ring * 0.22;
+                            } else if (engineConfig.name === "Echo") {
+                                const loop = Math.sin(rr * 9 + t * Math.PI * 4) * 0.5 + 0.5;
+                                t = t * 0.5 + loop * 0.5;
+                            } else {
+                                t = t * 0.6 + Math.abs(ring) * 0.4;
+                            }
+                        } else if (anomalyClass === "SpectralSplit") {
+                            t = Math.pow(t, engineConfig.name === "Rupture" ? 0.45 : 0.6);
                         }
                         t = Math.max(0.03, Math.min(0.97, t));
-                        t = Math.pow(t, 0.3);
+                        t = Math.pow(t, engineConfig.name === "Rupture" ? 0.22 : 0.3);
                     }
                     
                     // Variation guard
@@ -527,18 +594,39 @@
                     }
                     t = Math.max(0.03, Math.min(0.97, t));
                     
-                    t = signatureContrast(t);
+                    t = engineContrastShape(t, engineConfig.name);
                     
                     let { r, g, b } = getRichColor(t, currentTraits["Color Mood"] || "Neon", frozenTime, primaryDriver);
+                    
+                    // Engine-specific color discipline
+                    let colorDisciplined = engineColorDiscipline(r, g, b, engineConfig.name, t, frozenTime);
+                    r = colorDisciplined.r;
+                    g = colorDisciplined.g;
+                    b = colorDisciplined.b;
                     
                     const sigColor = signatureColor(t, frozenTime);
                     r = r * 0.8 + sigColor.r * 0.2;
                     g = g * 0.8 + sigColor.g * 0.2;
                     b = b * 0.8 + sigColor.b * 0.2;
                     
-                    if (isGrailFlag && anomalyClass === "SpectralSplit") { r *= 1.3; g *= 0.7; b *= 1.1; }
+                    // SpectralSplit Grail: break color harmony per engine
+                    if (isGrailFlag && anomalyClass === "SpectralSplit") {
+                        if (engineConfig.name === "Canonical") {
+                            r = Math.min(1, r * 1.18);
+                            g = g * 0.78;
+                            b = Math.min(1, b * 1.08);
+                        } else if (engineConfig.name === "Echo") {
+                            r = r * 0.82 + (Math.sin(frozenTime + t * 10) * 0.5 + 0.5) * 0.28;
+                            g = g * 0.7;
+                            b = b * 0.82 + (Math.cos(frozenTime + t * 10) * 0.5 + 0.5) * 0.28;
+                        } else {
+                            r = Math.min(1, r * 1.35);
+                            g = g * 0.58;
+                            b = Math.min(1, b * 1.18);
+                        }
+                    }
                     
-                    // ANIMATION applied here
+                    // Animation applied here
                     r = r * animatedPulse;
                     g = g * animatedPulse;
                     b = b * animatedPulse;
