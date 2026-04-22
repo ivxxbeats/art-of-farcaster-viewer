@@ -518,6 +518,10 @@
                     rx = geo.x;
                     ry = geo.y;
                     
+                    // Coordinate scaling (prevents center collapse)
+                    rx *= 1.2;
+                    ry *= 1.2;
+                    
                     let fractalVal = getDepthFractalValue(rx, ry, maxIter, layers, iterMult);
                     let patternVal = getPatternValue(rx, ry, time, engineConfig);
                     
@@ -537,15 +541,59 @@
                     }
                     t = Math.max(0.03, Math.min(0.97, t));
                     
+                    // ============================================================
+                    // VARIATION GUARD (prevents flat/dead images)
+                    // ============================================================
+                    let variation = Math.abs(fractalVal - patternVal);
+                    
+                    // Inject controlled noise for low variation
+                    if (variation < 0.02) {
+                        t += (Math.sin(rx * 12.3 + ry * 7.1) * 0.5 + 0.5) * 0.15;
+                    }
+                    
+                    // Blend fallback structure for extremely uniform fields
+                    if (variation < 0.01) {
+                        const fallback = Math.sin(rx * 8 + ry * 8) * 0.5 + 0.5;
+                        t = t * 0.7 + fallback * 0.3;
+                    }
+                    
+                    t = Math.max(0.03, Math.min(0.97, t));
+                    
                     if (isGrailFlag && anomalyClass) {
                         if (anomalyClass === "Interference") t = Math.abs(fractalVal - patternVal);
                         else if (anomalyClass === "Collapse") t = Math.min(fractalVal, patternVal);
                         else if (anomalyClass === "EchoLoop") t += Math.sin(t * 10) * 0.3;
                         t = Math.max(0.03, Math.min(0.97, t));
+                    
+                    // ============================================================
+                    // VARIATION GUARD (prevents flat/dead images)
+                    // ============================================================
+                    let variation = Math.abs(fractalVal - patternVal);
+                    
+                    // Inject controlled noise for low variation
+                    if (variation < 0.02) {
+                        t += (Math.sin(rx * 12.3 + ry * 7.1) * 0.5 + 0.5) * 0.15;
+                    }
+                    
+                    // Blend fallback structure for extremely uniform fields
+                    if (variation < 0.01) {
+                        const fallback = Math.sin(rx * 8 + ry * 8) * 0.5 + 0.5;
+                        t = t * 0.7 + fallback * 0.3;
+                    }
+                    
+                    t = Math.max(0.03, Math.min(0.97, t));
                         t = Math.pow(t, 0.3);
+                    
+                    t = signatureContrast(t);
                     }
                     
                     let { r, g, b } = getRichColor(t, currentTraits["Color Mood"] || "Neon", time, primaryDriver);
+                    
+                    // Signature Color blend (70% palette, 30% harmonic)
+                    const sigColor = signatureColor(t, time);
+                    r = r * 0.7 + sigColor.r * 0.3;
+                    g = g * 0.7 + sigColor.g * 0.3;
+                    b = b * 0.7 + sigColor.b * 0.3;
                     
                     // Apply gentle pulse
                     r = r * animatedPulse;
