@@ -278,7 +278,7 @@
     
     function updateAnimation(now) {
         const speed = awakenedLevel === "ascended" ? 1.5 : (awakenedLevel === "awakened" ? 1.2 : 1.0);
-        animatedPulse = 0.85 + Math.sin(now * 0.001 * speed) * 0.08;
+        animatedPulse = 0.92 + Math.sin(now * 0.0008) * 0.04;
         animatedHueShift = Math.sin(now * 0.0004 * speed) * 360 * 0.08;
         animatedGlitchX = Math.sin(now * 0.008) * 1.5;
         animatedGlitchY = Math.cos(now * 0.006) * 1.2;
@@ -544,7 +544,7 @@
             ctx.clearRect(0, 0, 700, 700);
             ctx.drawImage(offscreen, 0, 0, w, h, 0, 0, 700, 700);
             
-            applyAwakenedEffects(ctx, 700, 700, awakenedLevel, liveIntensity, now);
+            applyAwakenedEffects(ctx, 700, 700, awakenedLevel, liveIntensity, now);\n            applyIntensityEffects(ctx, 700, 700, liveIntensity, awakenedLevel, now);
             
             if (isGrail) {
                 for (var i = 0; i < 15; i++) {
