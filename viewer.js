@@ -211,13 +211,13 @@
         const archetype = rollArchetype(rarityClass, traitsRNG);
         const anchorForm = rollAnchorForm(archetype, traitsRNG);
         
-        const colors = ["Ethereal", "ChromaticShift", "Volcanic", "StellarDrift", "Mystic", "QuantumWave", "Serene", "PhantomGlow"];
+        const colors = ["Ethereal", "ChromaticShift", "Volcanic", "StellarDrift", "Mystic", "QuantumWave", "Serene", "PhantomGlow", "Nebula", "CrimsonDawn", "ArcticFrost", "SolarFlare", "DeepVoid", "PrismCore", "GhostLight", "AuroraBorealis"];
         const colorMood = colors[Math.floor(colorRNG() * colors.length)];
         
-        const compositions = ["Spiral", "Radial", "Kaleido", "FlowField", "Rotated"];
+        const compositions = ["Spiral", "Radial", "Kaleido", "FlowField", "Rotated", "Warp", "Mosaic", "Tunnel", "FractalNest", "Vortex"];
         const composition = compositions[Math.floor(compRNG() * compositions.length)];
         
-        const fractals = ["Nova", "Julia", "Mandelbrot", "Barnsley", "Dragon", "Magnet"];
+        const fractals = ["Nova", "Julia", "Mandelbrot", "Barnsley", "Dragon", "Magnet", "Phoenix", "BurningShip", "Tricorn", "Celtic", "Perpendicular", "Mandelbar"];
         const fractalType = fractals[Math.floor(compRNG() * fractals.length)];
         
         return {
