@@ -1,3 +1,50 @@
+﻿
+// ============================================================
+// TOKEN-SPECIFIC VISUAL SIGNATURE
+// ============================================================
+
+function getTokenVisualSignature(seed, tokenId) {
+    const tokenNum = parseInt(tokenId) || 1;
+    let hash = tokenNum;
+    for (let i = 0; i < 5; i++) {
+        hash = (hash * 9301 + 49297) % 233280;
+    }
+    return {
+        colorBias: { r: (hash % 100) / 100, g: ((hash * 7) % 100) / 100, b: ((hash * 13) % 100) / 100 },
+        contrast: 0.6 + ((hash * 3) % 120) / 100,
+        brightness: 0.5 + ((hash * 5) % 70) / 100,
+        saturation: 0.5 + ((hash * 11) % 100) / 100,
+        distortion: ((hash * 17) % 30) / 100,
+        glitchIntensity: ((hash * 29) % 50) / 100,
+        zoomLevel: 0.85 + ((hash * 43) % 45) / 100,
+        waveFreq: 0.7 + ((hash * 53) % 130) / 100
+    };
+}
+
+function applyTokenColorSignature(r, g, b, sig) {
+    let nr = r * (0.5 + sig.colorBias.r * 0.8);
+    let ng = g * (0.5 + sig.colorBias.g * 0.8);
+    let nb = b * (0.5 + sig.colorBias.b * 0.8);
+    nr = 0.5 + (nr - 0.5) * sig.contrast;
+    ng = 0.5 + (ng - 0.5) * sig.contrast;
+    nb = 0.5 + (nb - 0.5) * sig.contrast;
+    nr = nr * sig.brightness;
+    ng = ng * sig.brightness;
+    nb = nb * sig.brightness;
+    const gray = (nr + ng + nb) / 3;
+    nr = gray + (nr - gray) * sig.saturation;
+    ng = gray + (ng - gray) * sig.saturation;
+    nb = gray + (nb - gray) * sig.saturation;
+    return { r: Math.min(0.95, Math.max(0.05, nr)), g: Math.min(0.95, Math.max(0.05, ng)), b: Math.min(0.95, Math.max(0.05, nb)) };
+}
+
+function applyTokenDistortion(x, y, sig, time) {
+    let rx = x, ry = y;
+    const amount = sig.distortion * 0.5;
+    rx += Math.sin(ry * 15 * sig.waveFreq + time * 2) * amount;
+    ry += Math.cos(rx * 15 * sig.waveFreq + time * 1.5) * amount;
+    return { x: rx, y: ry };
+}
 // ============================================================
 // ART OF FARCASTER - AWAKENED ENGINE v3.0
 // Full integration with Farcaster Intensity API
@@ -421,15 +468,18 @@
     }
 
     function generateBaseParams(seed, tokenId) {
-        const rng = makeSeededRand(seed);
-        const offset = parseInt(tokenId) % 100;
-        for (let i = 0; i < offset; i++) rng();
-        return {
-            zoom: 0.7 + rng() * 1.2,
-            offsetX: (rng() - 0.5) * 1.0,
-            offsetY: (rng() - 0.5) * 1.0,
-            maxIter: 80 + Math.floor(rng() * 160)
-        };
+    const rng = makeSeededRand(seed);
+    const tokenNum = parseInt(tokenId) || 1;
+    const tokenOffset = (tokenNum * 997) % 1000;
+    for (let i = 0; i < tokenOffset; i++) rng();
+    const zoomVariation = 0.5 + (tokenNum % 100) / 50;
+    return {
+        zoom: (0.7 + rng() * 1.2) * zoomVariation,
+        offsetX: (rng() - 0.5) * 2.0 + ((tokenNum % 20) - 10) / 20,
+        offsetY: (rng() - 0.5) * 2.0 + ((tokenNum % 20) - 10) / 20,
+        maxIter: 60 + Math.floor(rng() * 200) + (tokenNum % 100)
+    };
+};
     }
 
     // ============================================================
@@ -803,7 +853,7 @@
         startTime = null;
         animationId = requestAnimationFrame(animate);
         
-        console.log("✅ Awakened Engine Ready - Token:", tokenId, "Grail:", isGrail);
+        console.log("âœ… Awakened Engine Ready - Token:", tokenId, "Grail:", isGrail);
     }
     
     if (document.readyState === 'loading') {
