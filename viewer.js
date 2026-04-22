@@ -1,13 +1,13 @@
-﻿// ============================================================
-// ART OF FARCASTER - VIEWER (EXACT MATCH to sketch.js)
-// Uses IDENTICAL trait generation and fractal engine
+// ============================================================
+// ART OF FARCASTER - COMPLETE VIEWER
+// Full animation + Live Intensity + Awakened Engine + Complementary Traits + Flow State
 // ============================================================
 
 (function() {
     "use strict";
     
     // ============================================================
-    // CONFIG (IDENTICAL to sketch.js)
+    // CONFIG
     // ============================================================
     const PHASES = { CALM: 0, BUILDUP: 1, CHAOS: 2, DECAY: 3 };
     const LOG2 = Math.log(2);
@@ -24,6 +24,85 @@
     const ANCHOR_FORMS = ["Aether", "PrismHeart", "Faultline", "Gate", "Nexus", "Bloom"];
     
     // ============================================================
+    // COMPLEMENTARY TRAITS (Viewer-only, not on-chain)
+    // ============================================================
+    
+    function getComplementaryTraits(rarityClass, awakenedLevel, intensity, tokenNum) {
+        // Mood based on intensity
+        let mood = "Serene";
+        if (intensity > 0.8) mood = "Intense";
+        else if (intensity > 0.6) mood = "Energetic";
+        else if (intensity > 0.4) mood = "Balanced";
+        else if (intensity > 0.2) mood = "Calm";
+        else mood = "Dormant";
+        
+        // Phase based on awakened level
+        let phase = awakenedLevel.charAt(0).toUpperCase() + awakenedLevel.slice(1);
+        
+        // Element based on token number
+        const elements = ["Fire", "Water", "Earth", "Air", "Light", "Shadow", "Crystal", "Void"];
+        const element = elements[tokenNum % elements.length];
+        
+        // Density based on rarity
+        let density = "Moderate";
+        if (rarityClass === "Grail") density = "Overflowing";
+        else if (rarityClass === "Mythic") density = "Dense";
+        else if (rarityClass === "Rare") density = "Abundant";
+        else if (rarityClass === "Uncommon") density = "Moderate";
+        else density = "Sparse";
+        
+        // Harmony based on intensity + rarity
+        let harmony = "Balanced";
+        if (intensity > 0.7 && rarityClass === "Grail") harmony = "Perfect";
+        else if (intensity > 0.5) harmony = "Flowing";
+        else harmony = "Still";
+        
+        // ============================================================
+        // FLOW STATE (NEW!)
+        // Based on intensity + awakened level + rarity
+        // ============================================================
+        let flowState = "Gentle";
+        if (awakenedLevel === "ascended") {
+            flowState = "Rapid";
+        } else if (awakenedLevel === "awakened") {
+            flowState = "Moving";
+        } else if (intensity > 0.7) {
+            flowState = "Surging";
+        } else if (intensity > 0.4) {
+            flowState = "Flowing";
+        } else {
+            flowState = "Gentle";
+        }
+        
+        // Flow substate for more detail
+        let flowSubstate = "Steady";
+        if (flowState === "Rapid") flowSubstate = "Turbulent";
+        else if (flowState === "Surging") flowSubstate = "Pulsing";
+        else if (flowState === "Flowing") flowSubstate = "Graceful";
+        else flowSubstate = "Peaceful";
+        
+        // Flow color based on flow state
+        let flowColor = "#88aaff";
+        if (flowState === "Rapid") flowColor = "#ff6688";
+        else if (flowState === "Surging") flowColor = "#ffaa44";
+        else if (flowState === "Flowing") flowColor = "#44ffaa";
+        else flowColor = "#88aaff";
+        
+        return { 
+            mood, phase, element, density, harmony,
+            flowState, flowSubstate, flowColor
+        };
+    }
+    
+    function updateComplementaryUI(complementary) {
+        const infoEl = document.getElementById('complementaryInfo');
+        if (infoEl) {
+            infoEl.innerHTML = `${complementary.mood} · ${complementary.element} · ${complementary.harmony} · ${complementary.flowState}`;
+            infoEl.style.borderLeft = `3px solid ${complementary.flowColor}`;
+        }
+    }
+    
+    // ============================================================
     // LIVE INTENSITY API
     // ============================================================
     let liveIntensity = 0.5;
@@ -38,13 +117,13 @@
                 if (liveIntensity > 0.8) awakenedLevel = "ascended";
                 else if (liveIntensity > 0.55) awakenedLevel = "awakened";
                 else awakenedLevel = "base";
-                console.log("Intensity:", liveIntensity, "Level:", awakenedLevel);
+                console.log("💪 Intensity:", liveIntensity, "| Level:", awakenedLevel);
             })
             .catch(function(e) { console.log("Intensity fetch failed"); });
     }
     
     // ============================================================
-    // DETERMINISTIC HELPERS (IDENTICAL to sketch.js)
+    // DETERMINISTIC HELPERS
     // ============================================================
     
     function getSeed(tokenId, txHash) {
@@ -89,7 +168,7 @@
     }
     
     // ============================================================
-    // TRAIT GENERATION (IDENTICAL to sketch.js)
+    // TRAIT GENERATION
     // ============================================================
     
     function weightedPick(items, weights, rng) {
@@ -136,13 +215,11 @@
     }
     
     function generateCollectionTraits(seed, tokenId) {
-        // Create RNG streams
         const streamRNGs = {};
         for(let i = 1; i <= 7; i++) {
             streamRNGs[i] = splitSeed(seed, i);
         }
         
-        // Apply token offset
         const tokenOffset = parseInt(tokenId, 10) || 0;
         const steps = (tokenOffset * 997) % 1000;
         for (let i = 0; i < steps; i++) {
@@ -159,11 +236,9 @@
         const archetype = rollArchetype(rarityClass, traitsRNG);
         const anchorForm = rollAnchorForm(archetype, traitsRNG);
         
-        // Color pools (matching sketch.js)
         const colors = ["Ethereal", "ChromaticShift", "Volcanic", "StellarDrift", "Mystic", "QuantumWave", "Serene", "PhantomGlow"];
         const colorMood = colors[Math.floor(colorRNG() * colors.length)];
         
-        // Composition pools (matching sketch.js)
         const compositions = ["Spiral", "Radial", "Kaleido", "FlowField", "Rotated"];
         const composition = compositions[Math.floor(compRNG() * compositions.length)];
         
@@ -201,9 +276,9 @@
     }
     
     // ============================================================
-    // ANIMATION VALUES
+    // ANIMATION VALUES (Subtle)
     // ============================================================
-    let animatedPulse = 0.7;
+    let animatedPulse = 0.85;
     let animatedHueShift = 0;
     let animatedGlitchX = 0;
     let animatedGlitchY = 0;
@@ -213,15 +288,15 @@
     
     function updateAnimation(now) {
         const speed = awakenedLevel === "ascended" ? 1.5 : (awakenedLevel === "awakened" ? 1.2 : 1.0);
-        animatedPulse = 0.7 + Math.sin(now * 0.002 * speed) * 0.15;
-        animatedHueShift = Math.sin(now * 0.0005 * speed) * 360 * 0.1;
-        animatedGlitchX = Math.sin(now * 0.01) * 2;
-        animatedGlitchY = Math.cos(now * 0.008) * 1.5;
-        animatedWavePhase = (animatedWavePhase + 0.03 * speed) % (Math.PI * 2);
+        animatedPulse = 0.85 + Math.sin(now * 0.001 * speed) * 0.08;
+        animatedHueShift = Math.sin(now * 0.0004 * speed) * 360 * 0.08;
+        animatedGlitchX = Math.sin(now * 0.008) * 1.5;
+        animatedGlitchY = Math.cos(now * 0.006) * 1.2;
+        animatedWavePhase = (animatedWavePhase + 0.02 * speed) % (Math.PI * 2);
     }
     
     // ============================================================
-    // FRACTAL ENGINES (IDENTICAL to sketch.js)
+    // FRACTAL ENGINES
     // ============================================================
     function novaFractalCalc(x0, y0, maxIter) {
         let x = x0, y = y0;
@@ -246,7 +321,7 @@
         return smooth < 0.02 ? 0.02 : smooth > 0.98 ? 0.98 : smooth;
     }
     
-    function getDepthFractalValue(x, y, maxIter, phase, progression) {
+    function getDepthFractalValue(x, y, maxIter) {
         let depth = 0;
         for (let i = 0; i < 3; i++) {
             const scale = 1 + i * 0.15;
@@ -255,7 +330,7 @@
         return depth / 3;
     }
     
-    function getPatternValue(x, y, time, progression) {
+    function getPatternValue(x, y, time) {
         const r = Math.sqrt(x * x + y * y);
         const a = Math.atan2(y, x);
         let val = Math.sin(a * 5 - r * 18 + time) * 0.35;
@@ -296,20 +371,22 @@
         let r, g, b;
         const pulse = animatedPulse;
         const hueShift = animatedHueShift * 0.017;
+        const boost = awakenedLevel === "ascended" ? 1.08 : (awakenedLevel === "awakened" ? 1.04 : 1.0);
         
-        switch(colorMood) {            case "Ethereal":
+        switch(colorMood) {
+            case "Ethereal":
                 r = 0.6 + 0.4 * Math.sin(t * 8 + time);
                 g = 0.3 + 0.5 * Math.sin(t * 10 + time * 1.1);
                 b = 0.9 + 0.1 * Math.sin(t * 12 + time * 0.9);
                 break;
             case "ChromaticShift":
-                r = Math.sin(t * 25 + time) * 0.9 + 0.5;
-                g = Math.sin(t * 25 + 2.094 + time * 1.3) * 0.9 + 0.5;
-                b = Math.sin(t * 25 + 4.188 + time * 0.7) * 0.9 + 0.5;
+                r = Math.sin(t * 25 + time + hueShift) * 0.7 + 0.5;
+                g = Math.sin(t * 25 + 2.094 + time * 1.3 + hueShift) * 0.7 + 0.5;
+                b = Math.sin(t * 25 + 4.188 + time * 0.7 + hueShift) * 0.7 + 0.5;
                 break;
             case "Volcanic":
                 r = 1.0;
-                g = 0.1 + 0.8 * Math.sin(t * 12 + time * 1.5);
+                g = 0.1 + 0.7 * Math.sin(t * 12 + time * 1.5);
                 b = 0.0;
                 break;
             case "StellarDrift":
@@ -336,52 +413,48 @@
                 r = 0.9 + 0.1 * Math.sin(t * 15 + time * 1.2);
                 g = 0.3 + 0.5 * Math.sin(t * 18 + time * 1.5);
                 b = 0.7 + 0.3 * Math.sin(t * 20 + time * 0.8);
-                break;default:
+                break;
+            default:
                 r = 0.0 + 1.0 * Math.sin(t * 8 + time);
                 g = 0.0 + 1.0 * Math.cos(t * 10 + time * 1.2);
                 b = 0.2 + 0.8 * Math.sin(t * 12 + time * 0.8);
                 break;
         }
         
-        // Apply pulse
-        r = Math.min(0.95, Math.max(0.05, r * pulse));
-        g = Math.min(0.95, Math.max(0.05, g * pulse));
-        b = Math.min(0.95, Math.max(0.05, b * pulse));
+        r = Math.min(0.95, Math.max(0.05, r * pulse * boost));
+        g = Math.min(0.95, Math.max(0.05, g * pulse * boost));
+        b = Math.min(0.95, Math.max(0.05, b * pulse * boost));
         
-        // Apply awakened boost
-        const boost = awakenedLevel === "ascended" ? 1.1 : (awakenedLevel === "awakened" ? 1.05 : 1.0);
-        
-        return { 
-            r: Math.min(0.95, r * boost), 
-            g: Math.min(0.95, g * boost), 
-            b: Math.min(0.95, b * boost) 
-        };
+        return { r, g, b };
     }
     
     // ============================================================
-    // AWAKENED VISUAL EFFECTS
+    // AWAKENED VISUAL EFFECTS (Subtle)
     // ============================================================
     function applyAwakenedEffects(ctx, w, h, level, intensity, now) {
         if (level === "ascended") {
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = "rgba(255,150,255,0.2)";
-            for (var i = 0; i < 3; i++) {
+            ctx.shadowBlur = 5;
+            ctx.shadowColor = "rgba(255,150,255,0.15)";
+            
+            for (var i = 0; i < 12; i++) {
                 ctx.beginPath();
-                ctx.arc(w/2, h/2, 100 + i * 40 + Math.sin(now * 0.003) * 10, 0, Math.PI * 2);
-                ctx.strokeStyle = `hsla(${now * 0.03 % 360}, 100%, 60%, 0.15)`;
-                ctx.lineWidth = 2;
+                ctx.arc(w/2, h/2, 100 + i * 30 + Math.sin(now * 0.002) * 5, 0, Math.PI * 2);
+                ctx.strokeStyle = `hsla(${now * 0.02 % 360}, 100%, 60%, 0.1)`;
+                ctx.lineWidth = 1.5;
                 ctx.stroke();
             }
-            for (var i = 0; i < 25; i++) {
-                ctx.fillStyle = `rgba(255,100,255,${Math.random() * 0.3})`;
-                ctx.fillRect(Math.random() * w, Math.random() * h, 3, 3);
+            
+            for (var i = 0; i < 15; i++) {
+                ctx.fillStyle = `rgba(255,150,255,${Math.random() * 0.12})`;
+                ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2);
             }
         } else if (level === "awakened") {
-            ctx.shadowBlur = 4;
-            ctx.shadowColor = "rgba(100,150,255,0.15)";
-            for (var i = 0; i < 15; i++) {
-                ctx.fillStyle = `rgba(100,200,255,${Math.random() * 0.2})`;
-                ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2);
+            ctx.shadowBlur = 3;
+            ctx.shadowColor = "rgba(100,150,255,0.1)";
+            
+            for (var i = 0; i < 8; i++) {
+                ctx.fillStyle = `rgba(100,150,255,${Math.random() * 0.08})`;
+                ctx.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5);
             }
         }
         ctx.shadowBlur = 0;
@@ -424,11 +497,16 @@
             const data = imgData.data;
             const isGrail = (currentTraits["Rarity Class"] === RARITY_CLASSES.GRAIL);
             const intensity = liveIntensity;
-            const time = canonicalTimeValue + now * 0.002;
+            const time = canonicalTimeValue + now * 0.0015;
             const zoom = baseTraits?.zoom || 1.0;
             const offsetX = baseTraits?.offsetX || 0;
             const offsetY = baseTraits?.offsetY || 0;
             const maxIter = baseTraits?.baseMaxIter || 120;
+            
+            // Get complementary traits
+            const tokenNum = parseInt(tokenId) || 1;
+            const complementary = getComplementaryTraits(currentTraits["Rarity Class"], awakenedLevel, liveIntensity, tokenNum);
+            updateComplementaryUI(complementary);
             
             for (let y = 0; y < h; y++) {
                 for (let x = 0; x < w; x++) {
@@ -443,8 +521,8 @@
                     let rx = transformed.x;
                     let ry = transformed.y;
                     
-                    let fractalVal = getDepthFractalValue(rx, ry, maxIter, deterministicPhase, "base");
-                    let patternVal = getPatternValue(rx, ry, time, "base");
+                    let fractalVal = getDepthFractalValue(rx, ry, maxIter);
+                    let patternVal = getPatternValue(rx, ry, time);
                     
                     let t = (fractalVal + patternVal) * 0.5;
                     t = Math.max(0.03, Math.min(0.97, t));
@@ -466,9 +544,9 @@
             applyAwakenedEffects(ctx, 700, 700, awakenedLevel, liveIntensity, now);
             
             if (isGrail) {
-                for (var i = 0; i < 20; i++) {
-                    ctx.fillStyle = `hsla(${now * 0.05 % 360}, 100%, 60%, 0.25)`;
-                    ctx.fillRect(Math.random() * 700, Math.random() * 700, 4, 4);
+                for (var i = 0; i < 15; i++) {
+                    ctx.fillStyle = `hsla(${now * 0.03 % 360}, 100%, 60%, 0.15)`;
+                    ctx.fillRect(Math.random() * 700, Math.random() * 700, 3, 3);
                 }
             }
             
@@ -499,7 +577,7 @@
         tokenId = params.get('tokenId') || params.get('tid') || '1';
         const txHash = params.get('txHash') || params.get('h') || '0x0';
         
-        console.log("Token:", tokenId);
+        console.log("🎨 Token:", tokenId);
         
         masterSeed = getSeed(tokenId, txHash);
         currentTraits = generateCollectionTraits(masterSeed, tokenId);
@@ -516,7 +594,7 @@
         startTime = null;
         requestAnimationFrame(animate);
         
-        console.log("Viewer ready - Token:", tokenId, "Traits:", currentTraits);
+        console.log("✅ Viewer ready - Token:", tokenId, "Traits:", currentTraits);
     }
     
     if (document.readyState === 'loading') {
