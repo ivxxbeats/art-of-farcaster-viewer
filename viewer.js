@@ -248,13 +248,13 @@
         const traitsRNG = streamRNGs[1];
         const varietyRNG = streamRNGs[2];
         
-        const zoomVariety = 0.3 + varietyRNG() * 2.2;
+        const zoomVariety = 0.5 + varietyRNG() * 1.3;
         const offsetVarietyX = (varietyRNG() - 0.5) * 3.0;
         const offsetVarietyY = (varietyRNG() - 0.5) * 3.0;
         const iterVariety = 40 + Math.floor(varietyRNG() * 260);
         
         return {
-            zoom: (0.7 + traitsRNG() * 1.2) * zoomVariety,
+            zoom: (0.5 + traitsRNG() * 0.8) * zoomVariety,
             offsetX: (traitsRNG() - 0.5) * 1.0 + offsetVarietyX,
             offsetY: (traitsRNG() - 0.5) * 1.0 + offsetVarietyY,
             baseMaxIter: 80 + Math.floor(traitsRNG() * 160) + iterVariety
