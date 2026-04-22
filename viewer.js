@@ -416,9 +416,9 @@
                 break;
         }
         
-        r = Math.min(0.95, Math.max(0.05, r * pulse));
-        g = Math.min(0.95, Math.max(0.05, g * pulse));
-        b = Math.min(0.95, Math.max(0.05, b * pulse));
+        r = Math.min(0.85, Math.max(0.15, r * pulse * 0.7));
+        g = Math.min(0.85, Math.max(0.15, g * pulse * 0.7));
+        b = Math.min(0.85, Math.max(0.15, b * pulse * 0.7));
         
         return { r, g, b };
     }
