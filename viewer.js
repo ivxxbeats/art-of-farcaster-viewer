@@ -597,8 +597,8 @@
     let startTime = null;
     
     function updateAnimation(now) {
-        animatedPulse = 0.98 + Math.sin(now * 0.0003) * 0.01;
-        animatedHueShift = Math.sin(now * 0.0001) * 360 * 0.008;
+        animatedPulse = 0.94 + Math.sin(now * 0.0005) * 0.03;
+        animatedHueShift = Math.sin(now * 0.00025) * 360 * 0.015;
     }
 
     // ============================================================
@@ -615,13 +615,13 @@
             }
         }
         
-        if (Math.random() < 0.002 * intensity) {
+        if (Math.random() < 0.0035 * intensity) {
             const shiftX = (Math.random() - 0.5) * 2;
             const shiftY = (Math.random() - 0.5) * 1;
             ctx.drawImage(ctx.canvas, shiftX, shiftY);
         }
         
-        if (Math.random() < 0.0015 * intensity) {
+        if (Math.random() < 0.0025 * intensity) {
             const imgData = ctx.getImageData(0, 0, w, h);
             const data = imgData.data;
             for (var i = 0; i < data.length; i += 4) {
@@ -634,14 +634,14 @@
             ctx.putImageData(imgData, 0, 0);
         }
         
-        if (Math.random() < 0.0015 * intensity) {
+        if (Math.random() < 0.0025 * intensity) {
             for (var i = 0; i < 10; i++) {
                 ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.3})`;
                 ctx.fillRect(Math.floor(Math.random() * w), Math.floor(Math.random() * h), 1, 1);
             }
         }
         
-        if (Math.random() < 0.0006 * intensity) {
+        if (Math.random() < 0.001 * intensity) {
             const tearY = Math.floor(Math.random() * h);
             const tearHeight = 2;
             const tearWidth = w * 0.3;
@@ -650,7 +650,7 @@
         }
         
         if (intensity > 0.3) {
-            const vignetteStrength = intensity * 0.08;
+            const vignetteStrength = intensity * 0.12;
             const gradient = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
             gradient.addColorStop(0, 'rgba(0,0,0,0)');
             gradient.addColorStop(0.6, `rgba(0,0,0,${vignetteStrength * 0.2})`);
@@ -665,7 +665,7 @@
         ctx.fillRect(10, 670, intensity * 100, 6);
         
         const hue = (now * 0.02 + intensity * 360) % 360;
-        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${intensity * 0.015})`;
+        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${intensity * 0.025})`;
         ctx.fillRect(0, 0, w, h);
     }
 
