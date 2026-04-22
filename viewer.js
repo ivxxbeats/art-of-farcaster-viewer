@@ -1,7 +1,8 @@
-﻿// Art of Farcaster Viewer - Working Version
+﻿// Art of Farcaster Viewer - Complete Fixed Version
 (function() {
     "use strict";
     
+    // Token signature function - SINGLE return
     function getTokenVisualSignature(tokenId) {
         var tokenNum = parseInt(tokenId) || 1;
         var hash = tokenNum;
@@ -19,11 +20,19 @@
             brightness: 0.3 + ((hash * 5) % 120) / 100,
             saturation: 0.2 + ((hash * 11) % 160) / 100,
             distortion: ((hash * 17) % 60) / 100,
+            glitchIntensity: ((hash * 29) % 80) / 100,
             zoomLevel: 0.5 + ((hash * 43) % 130) / 100,
-            posterize: Math.floor(((hash * 59) % 16))
+            waveFreq: 0.5 + ((hash * 53) % 200) / 100,
+            posterize: Math.floor(((hash * 59) % 16)),
+            redShift: ((hash * 61) % 50) / 100,
+            blueShift: ((hash * 67) % 50) / 100,
+            invertColors: ((hash * 71) % 100) > 80,
+            scanlineThick: ((hash * 73) % 50) / 100,
+            vignette: ((hash * 79) % 80) / 100
         };
     }
     
+    // Apply color signature
     function applyTokenColorSignature(r, g, b, sig) {
         var nr = r * sig.colorBias.r;
         var ng = g * sig.colorBias.g;
@@ -56,6 +65,7 @@
         };
     }
     
+    // Main initialization
     function init() {
         var canvas = document.getElementById("artCanvas");
         if (!canvas) {
@@ -70,21 +80,23 @@
         var params = new URLSearchParams(window.location.search);
         var tokenId = params.get("tokenId") || params.get("tid") || "1";
         
-        console.log("Token:", tokenId);
+        console.log("Loading token:", tokenId);
         
         var sig = getTokenVisualSignature(tokenId);
         var num = parseInt(tokenId) || 1;
-        var hue = (num * 37) % 360;
         
+        // Background color from token
+        var hue = (num * 37) % 360;
         ctx.fillStyle = "hsl(" + hue + ", 60%, 50%)";
         ctx.fillRect(0, 0, 700, 700);
         
-        // Draw pattern based on token
+        // Draw pattern
         var centerX = 350;
         var centerY = 350;
-        var pattern = num % 4;
+        var pattern = num % 5;
         
         ctx.strokeStyle = "white";
+        ctx.fillStyle = "white";
         ctx.lineWidth = 2;
         
         if (pattern === 0) {
@@ -108,6 +120,17 @@
                 var size = 50 + i * 30;
                 ctx.strokeRect(centerX - size/2, centerY - size/2, size, size);
             }
+        } else if (pattern === 3) {
+            for (var x = 0; x < 700; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x + 700, 700);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, x);
+                ctx.lineTo(700, x + 700);
+                ctx.stroke();
+            }
         } else {
             for (var i = 0; i < 200; i++) {
                 var t = i / 50;
@@ -115,16 +138,17 @@
                 var angle = t * Math.PI * 4;
                 var x = centerX + Math.cos(angle) * radius;
                 var y = centerY + Math.sin(angle) * radius;
-                ctx.fillStyle = "white";
                 ctx.fillRect(x, y, 4, 4);
             }
         }
         
+        // Token info
         ctx.fillStyle = "white";
         ctx.font = "24px monospace";
         ctx.textAlign = "center";
         ctx.fillText("Token #" + tokenId, 350, 50);
         
+        // Rarity
         var rarity = "Common";
         if (num % 100 === 0) rarity = "Grail";
         else if (num % 50 === 0) rarity = "Mythic";
@@ -135,12 +159,16 @@
         ctx.fillStyle = "rgba(255,255,255,0.8)";
         ctx.fillText(rarity, 350, 90);
         
+        // Grail special
         if (rarity === "Grail") {
             ctx.fillStyle = "gold";
+            ctx.font = "italic 16px monospace";
             ctx.fillText("⚜️ GRAIL ⚜️", 350, 650);
+            ctx.fillStyle = "rgba(255,215,0,0.2)";
+            ctx.fillRect(0, 0, 700, 700);
         }
         
-        console.log("Viewer ready", sig);
+        console.log("Viewer ready - Token:", tokenId, "Rarity:", rarity);
     }
     
     if (document.readyState === "loading") {
