@@ -1,14 +1,14 @@
-﻿// ============================================================
-// ART OF FARCASTER - VIEWER v21.0
-// Fixed: Variation guard runs AFTER Grail overrides
-// Grails get lighter fallback (82/18 vs 70/30)
+// ============================================================
+// ART OF FARCASTER - VIEWER v23.0
+// EXACT pipeline match with sketch.js
+// Only animation added AFTER field computation
 // ============================================================
 
 (function() {
     "use strict";
     
     // ============================================================
-    // SIGNATURE SYSTEM FUNCTIONS
+    // SIGNATURE SYSTEM FUNCTIONS (IDENTICAL to sketch)
     // ============================================================
     
     function signatureColor(t, time) {
@@ -28,7 +28,7 @@
     }
     
     // ============================================================
-    // CONFIG
+    // CONFIG (IDENTICAL to sketch)
     // ============================================================
     const LOG2 = Math.log(2);
     
@@ -44,7 +44,7 @@
     const ANCHOR_FORMS = ["Aether", "PrismHeart", "Faultline", "Gate", "Nexus", "Bloom"];
     
     // ============================================================
-    // ENGINE TYPES
+    // ENGINE TYPES (IDENTICAL to sketch)
     // ============================================================
     const ENGINE_TYPES = ["Canonical", "Echo", "Rupture"];
     const PRIMARY_DRIVERS = ["Fractal", "Pattern", "Color", "Composition"];
@@ -62,12 +62,12 @@
     }
     
     // ============================================================
-    // ANOMALY CLASS
+    // ANOMALY CLASS (IDENTICAL to sketch)
     // ============================================================
     const ANOMALY_CLASSES = ["Interference", "Collapse", "EchoLoop", "SpectralSplit"];
     
     // ============================================================
-    // ENGINE CONFIGURATION
+    // ENGINE CONFIGURATION (IDENTICAL to sketch)
     // ============================================================
     function getEngineConfig(engineType) {
         switch (engineType) {
@@ -83,7 +83,7 @@
     }
     
     // ============================================================
-    // LIVE INTENSITY API
+    // LIVE INTENSITY API (Viewer only)
     // ============================================================
     let liveIntensity = 0.5;
     let awakenedLevel = "base";
@@ -102,7 +102,7 @@
     }
     
     // ============================================================
-    // DETERMINISTIC HELPERS
+    // DETERMINISTIC HELPERS (IDENTICAL to sketch)
     // ============================================================
     function getSeed(tokenId, txHash) {
         let hash = 2166136261;
@@ -146,7 +146,7 @@
     }
     
     // ============================================================
-    // TRAIT GENERATION
+    // TRAIT GENERATION (IDENTICAL to sketch)
     // ============================================================
     function rollRarityClass(rng) {
         return weightedPick(
@@ -248,7 +248,7 @@
     }
     
     // ============================================================
-    // RENDER HELPERS
+    // RENDER HELPERS (IDENTICAL to sketch)
     // ============================================================
     function applyArchetypeGeometry(archetype, x, y) {
         switch(archetype) {
@@ -263,7 +263,7 @@
     }
     
     // ============================================================
-    // FRACTAL ENGINES
+    // FRACTAL ENGINES (IDENTICAL to sketch)
     // ============================================================
     function novaFractalCalc(x0, y0, maxIter) {
         let x = x0, y = y0;
@@ -398,7 +398,7 @@
     }
     
     // ============================================================
-    // COMPLEMENTARY TRAITS UI
+    // COMPLEMENTARY TRAITS UI (Viewer only)
     // ============================================================
     function getComplementaryTraits(rarityClass, awakenedLevel, intensity, tokenNum, primaryDriver, engineType) {
         let mood = intensity > 0.8 ? "Intense" : (intensity > 0.6 ? "Energetic" : (intensity > 0.4 ? "Balanced" : (intensity > 0.2 ? "Calm" : "Dormant")));
@@ -410,12 +410,12 @@
     function updateComplementaryUI(complementary) {
         const infoEl = document.getElementById('complementaryInfo');
         if (infoEl) {
-            infoEl.innerHTML = `${complementary.engineType} Â· ${complementary.mood} Â· ${complementary.element} Â· Driver: ${complementary.primaryDriver}`;
+            infoEl.innerHTML = `${complementary.engineType} · ${complementary.mood} · ${complementary.element} · Driver: ${complementary.primaryDriver}`;
         }
     }
     
     // ============================================================
-    // INTENSITY EFFECTS (Lightweight)
+    // INTENSITY EFFECTS (Lightweight animation only)
     // ============================================================
     let frameCount = 0;
     
@@ -455,7 +455,7 @@
     }
     
     // ============================================================
-    // RENDER ENGINE (Optimized - 320x320)
+    // RENDER ENGINE (EXACT pipeline as sketch)
     // ============================================================
     let canvas, ctx;
     let offscreen, offCtx;
@@ -469,7 +469,9 @@
     let startTime = null;
     let animationId = null;
     
+    // Animation ONLY applied after field computation
     let animatedPulse = 0.96;
+    let timeOffset = 0;
     
     function updateOffscreen() {
         const newW = 320;
@@ -487,14 +489,18 @@
     function renderFrame(now) {
         if (!currentTraits || !ctx) return;
         
+        // Gentle animation applied AFTER field computation
+        timeOffset = now;
         animatedPulse = 0.96 + Math.sin(now * 0.0005) * 0.02;
         
         try {
             updateOffscreen();
             const imgData = offCtx.createImageData(w, h);
             const data = imgData.data;
-            const intensity = liveIntensity;
-            const time = canonicalTimeValue + now * 0.001;
+            
+            // FROZEN time for core field computation (matches mint)
+            const frozenTime = canonicalTimeValue;  // NOT animated
+            
             const zoom = baseTraits?.zoom || 1.0;
             let offsetX = baseTraits?.offsetX || 0;
             let offsetY = baseTraits?.offsetY || 0;
@@ -523,6 +529,10 @@
             
             for (let y = 0; y < h; y++) {
                 for (let x = 0; x < w; x++) {
+                    // ============================================================
+                    // EXACT PIPELINE FROM sketch.js
+                    // ============================================================
+                    
                     let ux = (x / w) * 4.0 - 2.5;
                     let uy = (y / h) * 4.0 - 2.0;
                     ux *= w / h;
@@ -535,56 +545,72 @@
                     rx = geo.x;
                     ry = geo.y;
                     
-                    // Coordinate scaling (prevents center collapse)
+                    // Coordinate scaling
                     rx *= 1.2;
                     ry *= 1.2;
                     
-                    let fractalVal = getDepthFractalValue(rx, ry, maxIter, layers, iterMult);
-                    let patternVal = getPatternValue(rx, ry, time, engineConfig);
-                    
-                    let t;
-                    if (isRupture) {
-                        t = Math.abs(fractalVal - patternVal) + Math.sin(rx * ry * 2.5) * 0.2;
-                    } else if (isEcho) {
-                        t = fractalVal * fw + patternVal * pw;
-                    } else {
-                        if (primaryDriver === "Fractal") {
-                            t = fractalVal;
-                        } else if (primaryDriver === "Pattern") {
-                            t = patternVal;
-                        } else {
-                            t = fractalVal * fw + patternVal * pw;
-                        }
+                    // Composition divergence
+                    if (currentTraits["Spatial Behavior"] === "Asymmetrical") {
+                        rx += 0.4;
+                        ry -= 0.2;
                     }
+                    if (currentTraits["Spatial Behavior"] === "FlowField") {
+                        rx += Math.sin(ry * 2.5) * 0.3;
+                        ry += Math.cos(rx * 2.5) * 0.3;
+                    }
+                    if (currentTraits["Spatial Behavior"] === "Vortex") {
+                        let vr = Math.sqrt(rx*rx + ry*ry);
+                        let va = Math.atan2(ry, rx);
+                        va += vr * 3.0;
+                        rx = Math.cos(va) * vr * 0.8;
+                        ry = Math.sin(va) * vr * 0.8;
+                    }
+                    
+                    let fractalVal = getDepthFractalValue(rx, ry, maxIter, layers, iterMult);
+                    let patternVal = getPatternValue(rx, ry, frozenTime, engineConfig);
+                    
+                    // Frequency Tiers
+                    const frequencyTypes = ["low", "medium", "high", "extreme"];
+                    const freqIndex = tokenNum % 4;
+                    let freqMultiplier;
+                    switch(frequencyTypes[freqIndex]) {
+                        case "low": freqMultiplier = 4; break;
+                        case "medium": freqMultiplier = 8; break;
+                        case "high": freqMultiplier = 14; break;
+                        case "extreme": freqMultiplier = 22; break;
+                        default: freqMultiplier = 8;
+                    }
+                    let t = Math.sin((fractalVal + patternVal) * Math.PI * freqMultiplier / 8);
+                    t = (t + 1) / 2;
                     t = Math.max(0.03, Math.min(0.97, t));
                     
-                    // ============================================================
+                    // Boost structure contrast
+                    t = Math.pow(t, 0.6);
+                    
                     // GRAIL ANOMALY OVERRIDES
-                    // ============================================================
                     if (isGrailFlag && anomalyClass) {
                         if (anomalyClass === "Interference") {
-                            t = Math.abs(fractalVal - patternVal);
+                            let t2 = Math.sin((fractalVal + patternVal) * Math.PI * 18 / 8);
+                            t2 = (t2 + 1) / 2;
+                            t = (t + t2) / 2;
                         } else if (anomalyClass === "Collapse") {
-                            t = Math.min(fractalVal, patternVal);
+                            let r_center = Math.sqrt((rx-0.5)*(rx-0.5) + (ry-0.5)*(ry-0.5));
+                            let collapse = Math.max(0, 1 - r_center * 2);
+                            t = t * (1 - collapse * 0.7);
                         } else if (anomalyClass === "EchoLoop") {
-                            t += Math.sin(t * 10) * 0.3;
+                            let r_ring = Math.sqrt(rx*rx + ry*ry);
+                            let ring = Math.sin(r_ring * 15) * 0.3;
+                            t = t * 0.7 + ring * 0.3;
                         }
                         t = Math.max(0.03, Math.min(0.97, t));
                         t = Math.pow(t, 0.3);
                     }
                     
-                    // ============================================================
-                    // VARIATION GUARD (prevents flat/dead images)
-                    // Runs AFTER Grail overrides
-                    // ============================================================
+                    // Variation guard
                     let variation = Math.abs(fractalVal - patternVal);
-                    
-                    // Inject controlled noise for low variation
                     if (variation < 0.02) {
                         t += (Math.sin(rx * 12.3 + ry * 7.1) * 0.5 + 0.5) * 0.15;
                     }
-                    
-                    // Blend fallback structure for extremely uniform fields
                     if (variation < 0.01) {
                         const fallback = Math.sin(rx * 8 + ry * 8) * 0.5 + 0.5;
                         if (isGrailFlag) {
@@ -593,19 +619,29 @@
                             t = t * 0.7 + fallback * 0.3;
                         }
                     }
-                    
                     t = Math.max(0.03, Math.min(0.97, t));
                     
                     t = signatureContrast(t);
                     
-                    let { r, g, b } = getRichColor(t, currentTraits["Color Mood"] || "Neon", time, primaryDriver);
+                    let { r, g, b } = getRichColor(t, currentTraits["Color Mood"] || "Neon", frozenTime, primaryDriver);
                     
-                    // Signature Color blend (70% palette, 30% harmonic)
-                    const sigColor = signatureColor(t, time);
-                    r = r * 0.7 + sigColor.r * 0.3;
-                    g = g * 0.7 + sigColor.g * 0.3;
-                    b = b * 0.7 + sigColor.b * 0.3;
+                    const sigColor = signatureColor(t, frozenTime);
                     
+                    // Reduced color dominance
+                    r = r * 0.8 + sigColor.r * 0.2;
+                    g = g * 0.8 + sigColor.g * 0.2;
+                    b = b * 0.8 + sigColor.b * 0.2;
+                    
+                    // SpectralSplit Grail: break color harmony
+                    if (isGrailFlag && anomalyClass === "SpectralSplit") {
+                        r = r * 1.3;
+                        g = g * 0.7;
+                        b = b * 1.1;
+                    }
+                    
+                    // ============================================================
+                    // ANIMATION ONLY ADDED HERE (AFTER field computation)
+                    // ============================================================
                     r = r * animatedPulse;
                     g = g * animatedPulse;
                     b = b * animatedPulse;
