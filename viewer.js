@@ -1,6 +1,7 @@
 // ============================================================
-// ART OF FARCASTER - VIEWER v20.1
-// Fixed: signature functions, clean Grail block, variation guard
+// ART OF FARCASTER - VIEWER v21.0
+// Fixed: Variation guard runs AFTER Grail overrides
+// Grails get lighter fallback (82/18 vs 70/30)
 // ============================================================
 
 (function() {
@@ -558,23 +559,8 @@
                     t = Math.max(0.03, Math.min(0.97, t));
                     
                     // ============================================================
-                    // VARIATION GUARD (prevents flat/dead images)
+                    // GRAIL ANOMALY OVERRIDES
                     // ============================================================
-                    let variation = Math.abs(fractalVal - patternVal);
-                    
-                    // Inject controlled noise for low variation
-                    if (variation < 0.02) {
-                        t += (Math.sin(rx * 12.3 + ry * 7.1) * 0.5 + 0.5) * 0.15;
-                    }
-                    
-                    // Blend fallback structure for extremely uniform fields
-                    if (variation < 0.01) {
-                        const fallback = Math.sin(rx * 8 + ry * 8) * 0.5 + 0.5;
-                        t = t * 0.7 + fallback * 0.3;
-                    }
-                    
-                    t = Math.max(0.03, Math.min(0.97, t));
-                    
                     if (isGrailFlag && anomalyClass) {
                         if (anomalyClass === "Interference") {
                             t = Math.abs(fractalVal - patternVal);
@@ -586,6 +572,29 @@
                         t = Math.max(0.03, Math.min(0.97, t));
                         t = Math.pow(t, 0.3);
                     }
+                    
+                    // ============================================================
+                    // VARIATION GUARD (prevents flat/dead images)
+                    // Runs AFTER Grail overrides
+                    // ============================================================
+                    let variation = Math.abs(fractalVal - patternVal);
+                    
+                    // Inject controlled noise for low variation
+                    if (variation < 0.02) {
+                        t += (Math.sin(rx * 12.3 + ry * 7.1) * 0.5 + 0.5) * 0.15;
+                    }
+                    
+                    // Blend fallback structure for extremely uniform fields
+                    if (variation < 0.01) {
+                        const fallback = Math.sin(rx * 8 + ry * 8) * 0.5 + 0.5;
+                        if (isGrailFlag) {
+                            t = t * 0.82 + fallback * 0.18;
+                        } else {
+                            t = t * 0.7 + fallback * 0.3;
+                        }
+                    }
+                    
+                    t = Math.max(0.03, Math.min(0.97, t));
                     
                     t = signatureContrast(t);
                     
@@ -680,4 +689,4 @@
     } else {
         init();
     }
-})();// Force update - 2026-04-22 15:42:32
+})();
