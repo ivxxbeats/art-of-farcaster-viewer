@@ -1,7 +1,6 @@
-﻿// ============================================================
-// ART OF FARCASTER - VIEWER v15.0
-// 3-ENGINE SYSTEM: Canonical (78%) | Echo (19%) | Rupture (3%)
-// + Engine-based rendering + Grail overrides + Awakening integration
+// ============================================================
+// ART OF FARCASTER - VIEWER v19.0
+// Trimmed to match sketch.js: Structure Type, trimmed compositions, Anomaly
 // ============================================================
 
 (function() {
@@ -25,7 +24,7 @@
     const ANCHOR_FORMS = ["Aether", "PrismHeart", "Faultline", "Gate", "Nexus", "Bloom"];
     
     // ============================================================
-    // ENGINE TYPES (Top-level trait)
+    // ENGINE TYPES
     // ============================================================
     const ENGINE_TYPES = ["Canonical", "Echo", "Rupture"];
     
@@ -41,26 +40,18 @@
     
     function rollEngineType(rng, rarityClass) {
         if (rarityClass === "Grail") {
-            return weightedPick(
-                ["Canonical", "Echo", "Rupture"],
-                [0.10, 0.20, 0.70],
-                rng
-            );
+            return weightedPick(["Canonical", "Echo", "Rupture"], [0.10, 0.20, 0.70], rng);
         }
-        return weightedPick(
-            ["Canonical", "Echo", "Rupture"],
-            [0.78, 0.19, 0.03],
-            rng
-        );
+        return weightedPick(["Canonical", "Echo", "Rupture"], [0.78, 0.19, 0.03], rng);
     }
     
     // ============================================================
-    // GRAIL DRIVER
+    // ANOMALY (was Grail Driver)
     // ============================================================
-    const GRAIL_DRIVERS = ["Interference", "Collapse", "EchoLoop", "SpectralSplit"];
+    const ANOMALY_CLASSES = ["Interference", "Collapse", "EchoLoop", "SpectralSplit"];
     
-    function rollGrailDriver(rng) {
-        return weightedPick(GRAIL_DRIVERS, [0.25, 0.25, 0.25, 0.25], rng);
+    function rollAnomalyClass(rng) {
+        return weightedPick(ANOMALY_CLASSES, [0.25, 0.25, 0.25, 0.25], rng);
     }
     
     // ============================================================
@@ -72,49 +63,47 @@
                 return {
                     fractalWeight: 0.7,
                     patternWeight: 0.3,
-                    allowedCompositions: ["Centered", "Radial", "Spiral", "Kaleido"],
-                    paletteMode: "disciplined",
-                    distortionStrength: 0.12,
-                    hasExtraGlow: false,
+                    allowedCompositions: ["Radial", "Spiral", "Kaleido"],
                     name: "Canonical"
                 };
             case "Echo":
                 return {
                     fractalWeight: 0.35,
                     patternWeight: 0.65,
-                    allowedCompositions: ["FlowField", "Tunnel", "Vortex", "Warp"],
-                    paletteMode: "atmospheric",
-                    distortionStrength: 0.28,
-                    hasExtraGlow: false,
+                    allowedCompositions: ["FlowField", "Vortex", "Asymmetrical"],
                     name: "Echo"
                 };
             case "Rupture":
                 return {
                     fractalWeight: 0.5,
                     patternWeight: 0.5,
-                    allowedCompositions: ["Asymmetrical", "Diagonal", "Mosaic", "Offset"],
-                    paletteMode: "forbidden",
-                    distortionStrength: 0.45,
-                    hasExtraGlow: true,
+                    allowedCompositions: ["Asymmetrical", "Vortex", "Radial"],
                     name: "Rupture"
                 };
             default:
                 return {
                     fractalWeight: 0.5,
                     patternWeight: 0.5,
-                    allowedCompositions: ["Centered"],
-                    paletteMode: "disciplined",
-                    distortionStrength: 0.2,
-                    hasExtraGlow: false,
+                    allowedCompositions: ["Radial"],
                     name: "Canonical"
                 };
         }
     }
     
     // ============================================================
-    // PRIMARY VISUAL DRIVER
+    // PRIMARY DRIVER
     // ============================================================
     const PRIMARY_DRIVERS = ["Fractal", "Pattern", "Color", "Composition"];
+    
+    // ============================================================
+    // STRUCTURE TYPE (merged Fractal + Pattern)
+    // ============================================================
+    const STRUCTURE_TYPES = ["Nova", "Lattice", "Field", "Wave", "Grid", "Drift"];
+    
+    // ============================================================
+    // SPATIAL BEHAVIOR (trimmed composition list)
+    // ============================================================
+    const SPATIAL_BEHAVIORS = ["Radial", "Spiral", "FlowField", "Kaleido", "Vortex", "Asymmetrical"];
     
     // ============================================================
     // LIVE INTENSITY API
@@ -134,6 +123,46 @@
                 console.log("Intensity:", liveIntensity, "Level:", awakenedLevel);
             })
             .catch(function(e) { console.log("Intensity fetch failed"); });
+    }
+
+    // ============================================================
+    // SIGNATURE SYSTEM
+    // ============================================================
+    function signaturePhase(x, y, time, seed, awakeningLevel) {
+        let amplitude = 0.04;
+        if (awakeningLevel === "awakened") amplitude = 0.08;
+        else if (awakeningLevel === "ascended") amplitude = 0.12;
+        
+        const f1 = Math.sin(x * 2.3 + y * 1.7 + time * 0.6 + seed * 0.0001);
+        const f2 = Math.cos(x * 1.1 - y * 2.9 - time * 0.4);
+        const p = (f1 + f2) * 0.5;
+        return p * amplitude;
+    }
+    
+    function signatureColor(t, time, awakeningLevel) {
+        const base = t * 30 + time;
+        let r = Math.sin(base) * 0.5 + 0.5;
+        let g = Math.sin(base + 2.094) * 0.5 + 0.5;
+        let b = Math.sin(base + 4.188) * 0.5 + 0.5;
+        
+        if (awakeningLevel === "awakened") {
+            r *= 1.1; g *= 1.1; b *= 1.1;
+        } else if (awakeningLevel === "ascended") {
+            r *= 1.2; g *= 1.2; b *= 1.2;
+        }
+        
+        return { r: Math.min(0.95, r), g: Math.min(0.95, g), b: Math.min(0.95, b) };
+    }
+    
+    function signatureContrast(t, awakeningLevel) {
+        let k = 6.0;
+        if (awakeningLevel === "awakened") k = 8.0;
+        else if (awakeningLevel === "ascended") k = 10.0;
+        
+        let result = 1.0 / (1.0 + Math.exp(-k * (t - 0.5)));
+        const ridge = Math.abs(Math.sin(t * Math.PI));
+        result = result * 0.9 + ridge * 0.1;
+        return Math.max(0.02, Math.min(0.98, result));
     }
 
     // ============================================================
@@ -224,20 +253,12 @@
         const primaryDriver = weightedPick(PRIMARY_DRIVERS, [0.35, 0.25, 0.25, 0.15], rng);
         const engineConfig = getEngineConfig(engineType);
         
-        const composition = engineConfig.allowedCompositions[Math.floor(rng() * engineConfig.allowedCompositions.length)];
+        const spatialBehavior = engineConfig.allowedCompositions[Math.floor(rng() * engineConfig.allowedCompositions.length)];
         
-        const colors = engineConfig.paletteMode === "disciplined" 
-            ? ["Ethereal", "PrismCore", "AuroraBorealis", "StellarDrift"]
-            : engineConfig.paletteMode === "atmospheric"
-            ? ["Nebula", "DeepVoid", "StellarDrift", "AuroraBorealis"]
-            : ["Volcanic", "SolarFlare", "CrimsonDawn", "DeepVoid", "Chromatic"];
+        const colors = ["Ethereal", "Volcanic", "StellarDrift", "Nebula", "SolarFlare", "DeepVoid", "PrismCore", "AuroraBorealis"];
         const colorMood = colors[Math.floor(rng() * colors.length)];
         
-        const fractals = ["Nova", "Julia", "Mandelbrot", "Barnsley", "Dragon", "Magnet"];
-        const fractalType = fractals[Math.floor(rng() * fractals.length)];
-        
-        const densities = ["Sparse", "Medium", "Dense", "HyperDense"];
-        const density = densities[Math.floor(rng() * densities.length)];
+        const structureType = STRUCTURE_TYPES[Math.floor(rng() * STRUCTURE_TYPES.length)];
         
         const traits = {
             "Rarity Class": rarityClass,
@@ -246,14 +267,13 @@
             "Engine Type": engineType,
             "Primary Driver": primaryDriver,
             "Color Mood": colorMood,
-            "Composition": composition,
-            "Fractal Type": fractalType,
-            "Density": density,
+            "Spatial Behavior": spatialBehavior,
+            "Structure Type": structureType,
             "Engine Config": engineConfig
         };
         
         if (rarityClass === "Grail") {
-            traits["Grail Driver"] = rollGrailDriver(rng);
+            traits["Anomaly Class"] = rollAnomalyClass(rng);
         }
         
         return traits;
@@ -281,318 +301,43 @@
         const offsetVarietyY = (varietyRNG() - 0.5) * 2.0;
         const iterVariety = 40 + Math.floor(varietyRNG() * 200);
         
+        // Density internal (not exported)
+        const densityIndex = Math.floor(varietyRNG() * 4);
+        let iterMult = 1.0;
+        let layers = 3;
+        if (densityIndex === 0) { iterMult = 0.6; layers = 2; }
+        else if (densityIndex === 2) { iterMult = 1.2; layers = 3; }
+        else if (densityIndex === 3) { iterMult = 1.3; layers = 3; }
+        
         return {
             zoom: (0.5 + traitsRNG() * 0.8) * zoomVariety,
             offsetX: (traitsRNG() - 0.5) * 1.0 + offsetVarietyX,
             offsetY: (traitsRNG() - 0.5) * 1.0 + offsetVarietyY,
-            baseMaxIter: 60 + Math.floor(traitsRNG() * 140) + iterVariety
+            baseMaxIter: 60 + Math.floor(traitsRNG() * 140) + iterVariety,
+            iterMult: iterMult,
+            layers: layers
         };
     }
 
     // ============================================================
     // RENDER HELPERS
     // ============================================================
-    function getDensityMultiplier(density) {
-        switch(density) {
-            case "Sparse": return { iterMult: 0.6, layers: 2 };
-            case "Medium": return { iterMult: 1.0, layers: 3 };
-            case "Dense": return { iterMult: 1.3, layers: 4 };
-            case "HyperDense": return { iterMult: 1.6, layers: 5 };
-            default: return { iterMult: 1.0, layers: 3 };
-        }
-    }
-
-    // ============================================================
-    // AWAKENING INTEGRATION (Engine evolution)
-    // ============================================================
-    function applyAwakeningToEngine(rx, ry, engineConfig, awakeningLevel, time) {
-        let result = { x: rx, y: ry };
-        
-        if (awakeningLevel === "awakened") {
-            if (engineConfig.name === "Echo") {
-                result.x += Math.sin(time + ry * 2) * 0.2;
-            } else if (engineConfig.name === "Canonical") {
-                result.x *= 1.1;
-                result.y *= 1.1;
-            }
-        } else if (awakeningLevel === "ascended") {
-            if (engineConfig.name === "Rupture") {
-                result.x = Math.sin(rx * ry);
-                result.y = Math.cos(rx * ry);
-            } else if (engineConfig.name === "Echo") {
-                let r = Math.sqrt(rx*rx + ry*ry);
-                let a = Math.atan2(ry, rx);
-                a += Math.sin(r * 5 + time);
-                result.x = Math.cos(a) * r;
-                result.y = Math.sin(a) * r;
-            } else {
-                result.x *= 1.2;
-                result.y *= 1.2;
-            }
-        }
-        
-        return result;
-    }
-
-    // ============================================================
-    // ARCHETYPE GEOMETRY
-    // ============================================================
-    function applyArchetypeGeometry(archetype, x, y, engineConfig) {
-        let result = { x: x, y: y };
-        
-        if (engineConfig.name === "Echo") {
-            result.x += Math.sin(result.y * 2) * 0.3;
-        } else if (engineConfig.name === "Rupture") {
-            result.x = Math.sin(result.x * result.y);
-            result.y = Math.cos(result.x * result.y);
-        }
-        
+    function applyArchetypeGeometry(archetype, x, y) {
         switch(archetype) {
-            case "Signal":
-                result.x *= 0.8;
-                result.y *= 0.8;
-                break;
-            case "Drift":
-                result.x += Math.sin(result.y * 2) * 0.4;
-                break;
-            case "Rift":
-                result.x *= 1.6;
-                break;
-            case "Core":
-                result.y *= 0.5;
-                break;
-            case "Prism":
-                result.x = Math.abs(result.x);
-                result.y = Math.abs(result.y);
-                break;
-            case "Void":
-                result.x *= -1;
-                result.y *= -1;
-                break;
+            case "Signal": x *= 0.8; y *= 0.8; break;
+            case "Drift": x += Math.sin(y * 2) * 0.4; break;
+            case "Rift": x *= 1.6; break;
+            case "Core": y *= 0.5; break;
+            case "Prism": x = Math.abs(x); y = Math.abs(y); break;
+            case "Void": x *= -1; y *= -1; break;
         }
-        return result;
-    }
-
-    // ============================================================
-    // FRACTAL ENGINES
-    // ============================================================
-    function novaFractalCalc(x0, y0, maxIter) {
-        let x = x0, y = y0;
-        let iter = 0;
-        for (iter = 0; iter < maxIter; iter++) {
-            const x2 = x * x, y2 = y * y;
-            if (x2 + y2 > 4.0) break;
-            const xt = x2 - y2 + x0;
-            y = 2.0 * x * y + y0;
-            x = xt;
-        }
-        let smooth;
-        if (iter < maxIter) {
-            const mag2 = x * x + y * y;
-            const safeMag2 = Math.max(mag2, 1e-10);
-            const logZn = Math.log(safeMag2) * 0.5;
-            const nu = Math.log(logZn / LOG2) / LOG2;
-            smooth = (iter + 1 - nu) / maxIter;
-        } else {
-            smooth = 1.0;
-        }
-        return Math.max(0.02, Math.min(0.98, smooth));
-    }
-
-    function getFractalTypeMultiplier(fractalType) {
-        const multipliers = {
-            "Nova": { xScale: 1.0, yScale: 1.0 },
-            "Julia": { xScale: 1.2, yScale: 1.2 },
-            "Mandelbrot": { xScale: 0.8, yScale: 0.8 },
-            "Barnsley": { xScale: 1.5, yScale: 0.5 },
-            "Dragon": { xScale: 1.1, yScale: 1.1 },
-            "Magnet": { xScale: 0.9, yScale: 0.9 }
-        };
-        return multipliers[fractalType] || { xScale: 1.0, yScale: 1.0 };
-    }
-
-    function getDepthFractalValue(x, y, maxIter, fractalType, densityConfig) {
-        const multi = getFractalTypeMultiplier(fractalType);
-        const layers = densityConfig.layers;
-        let depth = 0;
-        for (let i = 0; i < layers; i++) {
-            const scale = (1 + i * 0.12) * multi.xScale;
-            const yScale = (1 + i * 0.1) * multi.yScale;
-            depth += novaFractalCalc(x * scale, y * yScale, Math.floor(maxIter * densityConfig.iterMult * 0.7));
-        }
-        return depth / layers;
-    }
-
-    function getPatternValue(x, y, time, engineConfig) {
-        const r = Math.sqrt(x * x + y * y);
-        const a = Math.atan2(y, x);
-        
-        if (engineConfig.name === "Echo") {
-            let val = Math.sin(a * 3 - r * 12 + time) * 0.4;
-            val += Math.sin(a * 6 + r * 6 - time * 0.3) * 0.2;
-            return Math.max(0.02, Math.min(0.98, (val + 0.5)));
-        } else if (engineConfig.name === "Rupture") {
-            let val = Math.sin(a * 8 - r * 25 + time * 2) * 0.3;
-            val += Math.sin(a * 16 + r * 15 - time * 1.5) * 0.2;
-            val += Math.sin(r * 30) * 0.15;
-            return Math.max(0.02, Math.min(0.98, (val + 0.5)));
-        } else {
-            let val = Math.sin(a * 5 - r * 18 + time) * 0.35;
-            val += Math.sin(a * 10 + r * 9 - time * 0.5) * 0.15;
-            return Math.max(0.02, Math.min(0.98, (val + 0.5)));
-        }
-    }
-
-    // ============================================================
-    // COMPOSITION TRANSFORM
-    // ============================================================
-    function applyCompositionTransform(ux, uy, composition, zoom, offsetX, offsetY, engineConfig) {
-        let x = ux / zoom + offsetX;
-        let y = uy / zoom + offsetY;
-        
-        if (engineConfig.name === "Echo") {
-            x += Math.sin(y * 2) * 0.2;
-            y += Math.cos(x * 2) * 0.2;
-        } else if (engineConfig.name === "Rupture") {
-            x = Math.sin(x * Math.PI);
-            y = Math.cos(y * Math.PI);
-        }
-        
-        switch(composition) {
-            case "Centered":
-                x *= 0.7;
-                y *= 0.7;
-                break;
-            case "Offset":
-                x += 0.3;
-                y -= 0.2;
-                break;
-            case "Diagonal":
-                let d = (x + y) * 0.5;
-                x = d;
-                y = d * 0.8;
-                break;
-            case "Asymmetrical":
-                x *= 1.3;
-                y *= 0.6;
-                break;
-            case "Radial": 
-                const r = Math.sqrt(x*x+y*y); 
-                const a = Math.atan2(y,x); 
-                x = a; y = r; 
-                break;
-            case "Spiral": 
-                const sr = Math.sqrt(x*x+y*y); 
-                const sa = Math.atan2(y,x); 
-                const spiralR = Math.pow(sr,0.7)*1.5; 
-                x = Math.cos(sa+spiralR*4)*spiralR; 
-                y = Math.sin(sa+spiralR*4)*spiralR; 
-                break;
-            case "Kaleido":
-                let angle = Math.atan2(y, x);
-                let radius = Math.sqrt(x*x + y*y);
-                let segments = 6;
-                angle = (angle % (Math.PI * 2 / segments));
-                if (angle > Math.PI / segments) angle = (Math.PI * 2 / segments) - angle;
-                x = Math.cos(angle) * radius;
-                y = Math.sin(angle) * radius;
-                break;
-            case "FlowField":
-                const flowAngle = Math.sin(x*3)*Math.cos(y*3); 
-                const cosA = Math.cos(flowAngle); 
-                const sinA = Math.sin(flowAngle); 
-                const nx = x*cosA - y*sinA; 
-                const ny = x*sinA + y*cosA; 
-                x = nx; y = ny; 
-                break;
-            case "Tunnel":
-                let tunnelR = Math.sqrt(x*x + y*y);
-                let tunnelTheta = Math.atan2(y, x);
-                x = tunnelTheta;
-                y = Math.log(tunnelR + 1.0);
-                break;
-            case "Vortex":
-                let vr = Math.sqrt(x*x + y*y);
-                let va = Math.atan2(y, x);
-                va += vr * 2.0;
-                x = Math.cos(va) * vr;
-                y = Math.sin(va) * vr;
-                break;
-            case "Warp":
-                x += Math.sin(y * 4) * 0.3;
-                y += Math.cos(x * 4) * 0.3;
-                break;
-            case "Mosaic":
-                x = Math.floor(x * 3) / 3;
-                y = Math.floor(y * 3) / 3;
-                break;
-            default: break;
-        }
-        return { x, y };
-    }
-
-    // ============================================================
-    // COLOR (Engine-specific)
-    // ============================================================
-    function getRichColor(t, colorMood, time, tokenNum, primaryDriver, engineConfig, isGrail, grailDriver) {
-        let r, g, b;
-        const tokenVar = tokenNum % 13;
-        
-        if (engineConfig.name === "Rupture") {
-            r = Math.sin(t * 45 + time) * 0.8 + 0.5;
-            g = Math.sin(t * 45 + 2.094 + time * 1.4) * 0.8 + 0.5;
-            b = Math.sin(t * 45 + 4.188 + time * 0.6) * 0.8 + 0.5;
-            if (isGrail && grailDriver === "SpectralSplit") {
-                r *= 1.3;
-                b *= 0.7;
-            }
-            return { r: Math.min(0.85, Math.max(0.15, r)), g: Math.min(0.85, Math.max(0.15, g)), b: Math.min(0.85, Math.max(0.15, b)) };
-        }
-        
-        if (engineConfig.name === "Echo") {
-            r = 0.3 + 0.5 * Math.sin(t * 6 + time * 0.7);
-            g = 0.4 + 0.4 * Math.sin(t * 8 + time * 0.9);
-            b = 0.7 + 0.2 * Math.sin(t * 10 + time * 1.1);
-            return { r: Math.min(0.85, Math.max(0.15, r)), g: Math.min(0.85, Math.max(0.15, g)), b: Math.min(0.85, Math.max(0.15, b)) };
-        }
-        
-        if (primaryDriver === "Color") {
-            r = Math.sin(t * 40 + time) * 0.5 + 0.5;
-            g = Math.sin(t * 40 + 2.094 + time) * 0.5 + 0.5;
-            b = Math.sin(t * 40 + 4.188 + time) * 0.5 + 0.5;
-            return { r: Math.min(0.85, Math.max(0.15, r)), g: Math.min(0.85, Math.max(0.15, g)), b: Math.min(0.85, Math.max(0.15, b)) };
-        }
-        
-        switch(colorMood) {
-            case "Ethereal":
-                r = 0.4 + 0.6 * Math.sin(t * (4 + tokenVar) + time);
-                g = 0.3 + 0.7 * Math.sin(t * (6 + tokenVar) + time * 1.2);
-                b = 0.5 + 0.5 * Math.sin(t * (8 + tokenVar) + time * 0.8);
-                break;
-            case "Volcanic":
-                r = 1.0;
-                g = 0.1 + 0.7 * Math.sin(t * 12 + time * 1.5);
-                b = 0.0;
-                break;
-            case "SolarFlare":
-                r = 1.0;
-                g = 0.5 + 0.5 * Math.sin(t * 14 + time);
-                b = 0.0;
-                break;
-            default:
-                r = Math.sin(t * 25 + time) * 0.7 + 0.5;
-                g = Math.sin(t * 25 + 2.094 + time * 1.3) * 0.7 + 0.5;
-                b = Math.sin(t * 25 + 4.188 + time * 0.7) * 0.7 + 0.5;
-                break;
-        }
-        
-        return { r: Math.min(0.85, Math.max(0.15, r)), g: Math.min(0.85, Math.max(0.15, g)), b: Math.min(0.85, Math.max(0.15, b)) };
+        return { x: x, y: y };
     }
 
     // ============================================================
     // ANIMATION VALUES
     // ============================================================
-    let animatedPulse = 0.96;
+    let animatedPulse = 0.94;
     let animatedHueShift = 0;
     let startTime = null;
     
@@ -606,7 +351,7 @@
     // ============================================================
     function applyIntensityEffects(ctx, w, h, intensity, now) {
         if (intensity > 0.2) {
-            const noiseAmount = 0.008 + intensity * 0.02;
+            const noiseAmount = 0.01 + intensity * 0.025;
             for (var i = 0; i < 150; i++) {
                 if (Math.random() < noiseAmount) {
                     ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.15})`;
@@ -621,7 +366,7 @@
             ctx.drawImage(ctx.canvas, shiftX, shiftY);
         }
         
-        if (Math.random() < 0.0025 * intensity) {
+        if (Math.random() < 0.005 * intensity) {
             const imgData = ctx.getImageData(0, 0, w, h);
             const data = imgData.data;
             for (var i = 0; i < data.length; i += 4) {
@@ -670,20 +415,154 @@
     }
 
     // ============================================================
-    // COMPLEMENTARY TRAITS UI
+    // FRACTAL ENGINES
+    // ============================================================
+    function novaFractalCalc(x0, y0, maxIter) {
+        let x = x0, y = y0;
+        let iter = 0;
+        for (iter = 0; iter < maxIter; iter++) {
+            const x2 = x * x, y2 = y * y;
+            if (x2 + y2 > 4.0) break;
+            const xt = x2 - y2 + x0;
+            y = 2.0 * x * y + y0;
+            x = xt;
+        }
+        let smooth;
+        if (iter < maxIter) {
+            const mag2 = x * x + y * y;
+            const safeMag2 = Math.max(mag2, 1e-10);
+            const logZn = Math.log(safeMag2) * 0.5;
+            const nu = Math.log(logZn / LOG2) / LOG2;
+            smooth = (iter + 1 - nu) / maxIter;
+        } else {
+            smooth = 1.0;
+        }
+        return Math.max(0.02, Math.min(0.98, smooth));
+    }
+
+    function getDepthFractalValue(x, y, maxIter, layers, iterMult) {
+        let depth = 0;
+        for (let i = 0; i < layers; i++) {
+            const scale = 1 + i * 0.15;
+            depth += novaFractalCalc(x * scale, y * scale, Math.floor(maxIter * iterMult * 0.7));
+        }
+        return depth / layers;
+    }
+
+    function getPatternValue(x, y, time, engineConfig) {
+        const r = Math.sqrt(x * x + y * y);
+        const a = Math.atan2(y, x);
+        
+        if (engineConfig.name === "Echo") {
+            let val = Math.sin(a * 3 - r * 12 + time) * 0.4;
+            val += Math.sin(a * 6 + r * 6 - time * 0.3) * 0.2;
+            return Math.max(0.02, Math.min(0.98, (val + 0.5)));
+        } else if (engineConfig.name === "Rupture") {
+            let val = Math.sin(a * 8 - r * 25 + time * 2) * 0.3;
+            val += Math.sin(a * 16 + r * 15 - time * 1.5) * 0.2;
+            val += Math.sin(r * 30) * 0.15;
+            return Math.max(0.02, Math.min(0.98, (val + 0.5)));
+        } else {
+            let val = Math.sin(a * 5 - r * 18 + time) * 0.35;
+            val += Math.sin(a * 10 + r * 9 - time * 0.5) * 0.15;
+            return Math.max(0.02, Math.min(0.98, (val + 0.5)));
+        }
+    }
+
+    function applyCompositionTransform(ux, uy, composition, zoom, offsetX, offsetY) {
+        let x = ux / zoom + offsetX;
+        let y = uy / zoom + offsetY;
+        
+        switch(composition) {
+            case "Radial": 
+                const r = Math.sqrt(x*x+y*y); 
+                const a = Math.atan2(y,x); 
+                x = a; y = r; 
+                break;
+            case "Spiral": 
+                const sr = Math.sqrt(x*x+y*y); 
+                const sa = Math.atan2(y,x); 
+                const spiralR = Math.pow(sr,0.7)*1.5; 
+                x = Math.cos(sa+spiralR*4)*spiralR; 
+                y = Math.sin(sa+spiralR*4)*spiralR; 
+                break;
+            case "FlowField": 
+                const angle = Math.sin(x*3)*Math.cos(y*3); 
+                const cosA = Math.cos(angle); 
+                const sinA = Math.sin(angle); 
+                const nx = x*cosA - y*sinA; 
+                const ny = x*sinA + y*cosA; 
+                x = nx; y = ny; 
+                break;
+            case "Kaleido":
+                let angleK = Math.atan2(y, x);
+                let radiusK = Math.sqrt(x*x + y*y);
+                let segments = 6;
+                angleK = (angleK % (Math.PI * 2 / segments));
+                if (angleK > Math.PI / segments) angleK = (Math.PI * 2 / segments) - angleK;
+                x = Math.cos(angleK) * radiusK;
+                y = Math.sin(angleK) * radiusK;
+                break;
+            case "Vortex":
+                let vr = Math.sqrt(x*x + y*y);
+                let va = Math.atan2(y, x);
+                va += vr * 2.0;
+                x = Math.cos(va) * vr;
+                y = Math.sin(va) * vr;
+                break;
+            case "Asymmetrical":
+                x *= 1.3;
+                y *= 0.6;
+                break;
+            default: break;
+        }
+        return { x, y };
+    }
+
+    function getRichColor(t, colorMood, time, primaryDriver) {
+        let r, g, b;
+        
+        if (primaryDriver === "Color") {
+            r = Math.sin(t * 40 + time) * 0.5 + 0.5;
+            g = Math.sin(t * 40 + 2.094 + time) * 0.5 + 0.5;
+            b = Math.sin(t * 40 + 4.188 + time) * 0.5 + 0.5;
+            return { r: Math.min(0.85, Math.max(0.15, r)), g: Math.min(0.85, Math.max(0.15, g)), b: Math.min(0.85, Math.max(0.15, b)) };
+        }
+        
+        switch(colorMood) {
+            case "Volcanic":
+                r = 1.0;
+                g = 0.1 + 0.7 * Math.sin(t * 12 + time);
+                b = 0.0;
+                break;
+            case "SolarFlare":
+                r = 1.0;
+                g = 0.5 + 0.5 * Math.sin(t * 14 + time);
+                b = 0.0;
+                break;
+            default:
+                r = Math.sin(t * 25 + time) * 0.7 + 0.5;
+                g = Math.sin(t * 25 + 2.094 + time * 1.3) * 0.7 + 0.5;
+                b = Math.sin(t * 25 + 4.188 + time * 0.7) * 0.7 + 0.5;
+                break;
+        }
+        return { r: Math.min(0.85, Math.max(0.15, r)), g: Math.min(0.85, Math.max(0.15, g)), b: Math.min(0.85, Math.max(0.15, b)) };
+    }
+
+    // ============================================================
+    // COMPLEMENTARY TRAITS UI (Trimmed: only Energy + Affinity)
     // ============================================================
     function getComplementaryTraits(rarityClass, awakenedLevel, intensity, tokenNum, primaryDriver, engineType) {
         let mood = intensity > 0.8 ? "Intense" : (intensity > 0.6 ? "Energetic" : (intensity > 0.4 ? "Balanced" : (intensity > 0.2 ? "Calm" : "Dormant")));
         const elements = ["Fire", "Water", "Earth", "Air", "Light", "Shadow", "Crystal", "Void"];
         const element = elements[tokenNum % elements.length];
-        let flowState = awakenedLevel === "ascended" ? "Rapid" : (awakenedLevel === "awakened" ? "Moving" : (intensity > 0.7 ? "Surging" : (intensity > 0.4 ? "Flowing" : "Gentle")));
-        return { mood, element, flowState, primaryDriver, engineType };
+        return { mood, element, primaryDriver, engineType };
     }
     
     function updateComplementaryUI(complementary) {
         const infoEl = document.getElementById('complementaryInfo');
         if (infoEl) {
-            infoEl.innerHTML = `${complementary.engineType} Â· ${complementary.mood} Â· ${complementary.element} Â· ${complementary.flowState} Â· Driver: ${complementary.primaryDriver}`;
+            infoEl.innerHTML = `${complementary.engineType} · ${complementary.mood} · ${complementary.element} · Driver: ${complementary.primaryDriver}`;
         }
     }
 
@@ -722,7 +601,7 @@
             
             const imgData = offCtx.createImageData(w, h);
             const data = imgData.data;
-            const isGrail = (currentTraits["Rarity Class"] === RARITY_CLASSES.GRAIL);
+            const isGrailFlag = (currentTraits["Rarity Class"] === RARITY_CLASSES.GRAIL);
             const intensity = liveIntensity;
             const awakeningLevel = awakenedLevel;
             const time = canonicalTimeValue + now * 0.0015;
@@ -730,16 +609,21 @@
             let offsetX = baseTraits?.offsetX || 0;
             let offsetY = baseTraits?.offsetY || 0;
             const maxIter = baseTraits?.baseMaxIter || 120;
+            const layers = baseTraits?.layers || 3;
+            const iterMult = baseTraits?.iterMult || 1.0;
             
             const tokenNum = parseInt(tokenId) || 1;
-            const densityConfig = getDensityMultiplier(currentTraits["Density"]);
-            const primaryDriver = currentTraits["Primary Driver"];
-            const archetype = currentTraits["Archetype"];
             const engineConfig = currentTraits["Engine Config"];
-            const grailDriver = currentTraits["Grail Driver"];
+            const primaryDriver = currentTraits["Primary Driver"];
+            const isRupture = engineConfig.name === "Rupture";
+            const isEcho = engineConfig.name === "Echo";
+            const anomalyClass = currentTraits["Anomaly Class"];
             
             const complementary = getComplementaryTraits(currentTraits["Rarity Class"], awakenedLevel, liveIntensity, tokenNum, primaryDriver, engineConfig.name);
             updateComplementaryUI(complementary);
+            
+            const fw = engineConfig.fractalWeight;
+            const pw = engineConfig.patternWeight;
             
             const phi = 1.618;
             const goldenX = w / phi;
@@ -749,75 +633,67 @@
             const adjustedOffsetX = offsetX + goldenOffsetX;
             const adjustedOffsetY = offsetY + goldenOffsetY;
             
-            let fractalWeight = engineConfig.fractalWeight;
-            let patternWeight = engineConfig.patternWeight;
-            
-            // Awakening modifies weights
-            if (awakenedLevel === "awakened") {
-                fractalWeight *= 1.2;
-                patternWeight *= 0.8;
-            } else if (awakenedLevel === "ascended") {
-                fractalWeight *= 1.4;
-                patternWeight *= 0.6;
-            }
-            
             for (let y = 0; y < h; y++) {
                 for (let x = 0; x < w; x++) {
                     let ux = (x / w) * 4.0 - 2.5;
                     let uy = (y / h) * 4.0 - 2.0;
                     ux *= w / h;
                     
-                    let transformed = applyCompositionTransform(ux, uy, currentTraits.Composition, zoom, adjustedOffsetX, adjustedOffsetY, engineConfig);
-                    // Signature Phase Warp
+                    let transformed = applyCompositionTransform(ux, uy, currentTraits["Spatial Behavior"], zoom, adjustedOffsetX, adjustedOffsetY);
+                    
                     const phaseShift = signaturePhase(transformed.x, transformed.y, time, masterSeed, awakeningLevel);
                     let rx = transformed.x + phaseShift;
                     let ry = transformed.y + phaseShift;
                     
-                    // Apply awakening to engine
-                    let awakened = applyAwakeningToEngine(rx, ry, engineConfig, awakenedLevel, time);
-                    rx = awakened.x;
-                    ry = awakened.y;
+                    if (isGrailFlag && anomalyClass) {
+                        rx += phaseShift * 0.05;
+                        ry += phaseShift * 0.05;
+                    }
                     
-                    let geo = applyArchetypeGeometry(archetype, rx, ry, engineConfig);
+                    let geo = applyArchetypeGeometry(currentTraits["Archetype"], rx, ry);
                     rx = geo.x;
                     ry = geo.y;
                     
-                    let fractalVal = getDepthFractalValue(rx, ry, maxIter, currentTraits["Fractal Type"], densityConfig);
+                    let fractalVal = getDepthFractalValue(rx, ry, maxIter, layers, iterMult);
                     let patternVal = getPatternValue(rx, ry, time, engineConfig);
                     
                     let t;
-                    if (engineConfig.name === "Rupture") {
-                        t = Math.abs(fractalVal - patternVal) + Math.sin(rx * ry * 2.5 + time) * 0.2;
-                    } else if (engineConfig.name === "Echo") {
-                        t = fractalVal * fractalWeight + patternVal * patternWeight;
+                    if (isRupture) {
+                        t = Math.abs(fractalVal - patternVal) + Math.sin(rx * ry * 2.5) * 0.2;
+                    } else if (isEcho) {
+                        t = fractalVal * fw + patternVal * pw;
                     } else {
                         if (primaryDriver === "Fractal") {
                             t = fractalVal;
                         } else if (primaryDriver === "Pattern") {
                             t = patternVal;
                         } else {
-                            t = fractalVal * fractalWeight + patternVal * patternWeight;
+                            t = fractalVal * fw + patternVal * pw;
                         }
                     }
-                    t = signatureContrast(t, awakeningLevel);
-                        t = Math.max(0.03, Math.min(0.97, t));
+                    t = Math.max(0.03, Math.min(0.97, t));
                     
-                    if (isGrail) {
-                        if (grailDriver === "Interference") {
+                    t = signatureContrast(t, awakeningLevel);
+                    
+                    if (isGrailFlag && anomalyClass) {
+                        if (anomalyClass === "Interference") {
                             t = Math.abs(fractalVal - patternVal);
-                        } else if (grailDriver === "Collapse") {
+                        } else if (anomalyClass === "Collapse") {
                             t = Math.min(fractalVal, patternVal);
-                        } else if (grailDriver === "EchoLoop") {
-                            t += Math.sin(t * 10 + time) * 0.3;
+                        } else if (anomalyClass === "EchoLoop") {
+                            t += Math.sin(t * 10) * 0.3;
                         }
-                        t = signatureContrast(t, awakeningLevel);
                         t = Math.max(0.03, Math.min(0.97, t));
                         t = Math.pow(t, 0.3);
                     }
                     
-                    let { r, g, b } = getRichColor(t, currentTraits["Color Mood"] || "Neon", time, tokenNum, primaryDriver, engineConfig, isGrail, grailDriver);
+                    let { r, g, b } = getRichColor(t, currentTraits["Color Mood"] || "Neon", time, primaryDriver);
                     
-                    // Apply gentle pulse animation
+                    const sigColor = signatureColor(t, time, awakeningLevel);
+                    r = r * 0.7 + sigColor.r * 0.3;
+                    g = g * 0.7 + sigColor.g * 0.3;
+                    b = b * 0.7 + sigColor.b * 0.3;
+                    
                     const pulse = animatedPulse;
                     r = r * pulse;
                     g = g * pulse;
@@ -837,16 +713,16 @@
             
             applyIntensityEffects(ctx, 700, 700, liveIntensity, now);
             
-            if (engineConfig.hasExtraGlow || isGrail) {
+            if (engineConfig.name === "Rupture" || isGrailFlag) {
                 ctx.globalCompositeOperation = "lighter";
-                ctx.globalAlpha = 0.12;
+                ctx.globalAlpha = 0.18;
                 ctx.drawImage(offscreen, 0, 0);
                 ctx.globalAlpha = 1.0;
                 ctx.globalCompositeOperation = "source-over";
             }
             
             ctx.globalCompositeOperation = 'lighter';
-            ctx.globalAlpha = 0.08;
+            ctx.globalAlpha = 0.12;
             ctx.drawImage(offscreen, 0, 0);
             ctx.globalAlpha = 1.0;
             ctx.globalCompositeOperation = 'source-over';
