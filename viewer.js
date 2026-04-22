@@ -575,6 +575,14 @@
             const zoom = baseTraits?.zoom || 1.0;
             const offsetX = baseTraits?.offsetX || 0;
             const offsetY = baseTraits?.offsetY || 0;
+                const tokenNum = parseInt(tokenId) || 1;
+                const phi = 1.618;
+                const goldenX = w / phi;
+                const goldenY = h / phi;
+                const goldenOffsetX = (goldenX - w/2) / w * 0.3;
+                const goldenOffsetY = (goldenY - h/2) / h * 0.3;
+                const adjustedOffsetX = offsetX + goldenOffsetX;
+                const adjustedOffsetY = offsetY + goldenOffsetY;
             const maxIter = baseTraits?.baseMaxIter || 120;
             
             const tokenNum = parseInt(tokenId) || 1;
