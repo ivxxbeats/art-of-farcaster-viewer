@@ -1,216 +1,148 @@
-﻿// Art of Farcaster Viewer - Clean Working Version
+﻿// Art of Farcaster Viewer - Fixed Version
+// No return statements outside functions
+
 (function() {
     "use strict";
     
-    // Rarity classes
-    var RARITY_CLASSES = {
-        COMMON: "Common",
-        UNCOMMON: "Uncommon",
-        RARE: "Rare",
-        MYTHIC: "Mythic",
-        GRAIL: "Grail"
-    };
-    
-    var ARCHETYPES = ["Signal", "Drift", "Rift", "Core", "Prism", "Void"];
-    var ANCHOR_FORMS = ["Aether", "PrismHeart", "Faultline", "Gate", "Nexus", "Bloom"];
-    
-    var canvas = null;
-    var ctx = null;
-    var currentTraits = null;
-    var tokenId = null;
-    
-    // Helper functions
-    function getSeed(tokenId, txHash) {
-        var hash = 2166136261;
-        var str = txHash + "_" + tokenId;
-        for (var i = 0; i < str.length; i++) {
-            hash ^= str.charCodeAt(i);
-            hash = (hash * 16777619) >>> 0;
-        }
-        return hash >>> 0;
-    }
-    
-    function deterministicRandom(seed, index) {
-        var state = (seed + index) >>> 0;
-        state = (state + 0x9e3779b9) >>> 0;
-        state ^= state >>> 15;
-        state = (state * 0x85ebca6b) >>> 0;
-        state ^= state >>> 13;
-        state = (state * 0xc2b2ae35) >>> 0;
-        state ^= state >>> 16;
-        return state / 0xffffffff;
-    }
-    
-    function generateTraits(seed, tokenId) {
-        var traits = {};
-        var rarityRand = deterministicRandom(seed, 0);
-        if (rarityRand < 0.60) {
-            traits["Rarity Class"] = "Common";
-        } else if (rarityRand < 0.85) {
-            traits["Rarity Class"] = "Uncommon";
-        } else if (rarityRand < 0.95) {
-            traits["Rarity Class"] = "Rare";
-        } else if (rarityRand < 0.99) {
-            traits["Rarity Class"] = "Mythic";
-        } else {
-            traits["Rarity Class"] = "Grail";
+    // Wait for DOM to be ready
+    function startViewer() {
+        var canvas = document.getElementById("artCanvas");
+        if (!canvas) {
+            console.log("Waiting for canvas...");
+            setTimeout(startViewer, 100);
+            return;
         }
         
-        var archetypeRand = deterministicRandom(seed, 1);
-        var archetypeIndex = Math.floor(archetypeRand * ARCHETYPES.length);
-        traits.Archetype = ARCHETYPES[archetypeIndex];
+        console.log("Canvas found, starting viewer");
         
-        var formRand = deterministicRandom(seed, 2);
-        var formIndex = Math.floor(formRand * ANCHOR_FORMS.length);
-        traits["Anchor Form"] = ANCHOR_FORMS[formIndex];
+        canvas.width = 700;
+        canvas.height = 700;
+        var ctx = canvas.getContext("2d");
         
-        var colors = ["Neon", "Rainbow", "Fire", "Aurora", "Ice", "Magma"];
-        var colorRand = deterministicRandom(seed, 3);
-        traits["Color Mood"] = colors[Math.floor(colorRand * colors.length)];
+        // Get token from URL
+        var params = new URLSearchParams(window.location.search);
+        var tokenId = params.get("tokenId") || params.get("tid") || "1";
+        var txHash = params.get("txHash") || params.get("h") || "0x0";
         
-        var compositions = ["Centered", "Radial", "Spiral", "FlowField"];
-        var compRand = deterministicRandom(seed, 4);
-        traits.Composition = compositions[Math.floor(compRand * compositions.length)];
+        console.log("Token ID:", tokenId);
         
-        return traits;
-    }
-    
-    function getUniqueColor(tokenId) {
+        // Generate deterministic colors based on token
         var num = parseInt(tokenId) || 1;
         var hue = (num * 37) % 360;
         var sat = 50 + (num % 50);
         var light = 40 + (num % 40);
-        return "hsl(" + hue + ", " + sat + "%, " + light + "%)";
-    }
-    
-    function getAccentColor(tokenId, offset) {
-        var num = parseInt(tokenId) || 1;
-        var hue = ((num * 37) + offset) % 360;
-        return "hsl(" + hue + ", 70%, 60%)";
-    }
-    
-    function renderArt() {
-        if (!currentTraits || !ctx) {
-            return;
-        }
         
-        var w = canvas.width;
-        var h = canvas.height;
-        var num = parseInt(tokenId) || 1;
+        // Draw background
+        ctx.fillStyle = "hsl(" + hue + ", " + sat + "%, " + light + "%)";
+        ctx.fillRect(0, 0, 700, 700);
         
-        // Clear with token-unique background
-        ctx.fillStyle = getUniqueColor(tokenId);
-        ctx.fillRect(0, 0, w, h);
+        // Draw pattern based on token
+        var centerX = 350;
+        var centerY = 350;
+        var patternNum = num % 6;
         
-        var centerX = w / 2;
-        var centerY = h / 2;
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 2;
         
-        // Draw pattern based on token ID
-        var patternType = num % 5;
-        var ringCount = 5 + (num % 10);
-        
-        if (patternType === 0) {
-            // Concentric rings
-            for (var i = 0; i < ringCount; i++) {
-                var radius = 50 + i * 40;
+        if (patternNum === 0) {
+            // Concentric circles
+            for (var i = 1; i <= 5; i++) {
                 ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                ctx.strokeStyle = getAccentColor(tokenId, i * 30);
-                ctx.lineWidth = 3;
+                ctx.arc(centerX, centerY, i * 50, 0, Math.PI * 2);
                 ctx.stroke();
             }
-        } else if (patternType === 1) {
+        } else if (patternNum === 1) {
             // Radiating lines
-            for (var i = 0; i < 36; i++) {
+            for (var i = 0; i < 12; i++) {
                 var angle = (i * (num % 360)) * Math.PI / 180;
                 var x2 = centerX + Math.cos(angle) * 300;
                 var y2 = centerY + Math.sin(angle) * 300;
                 ctx.beginPath();
                 ctx.moveTo(centerX, centerY);
                 ctx.lineTo(x2, y2);
-                ctx.strokeStyle = getAccentColor(tokenId, i * 10);
                 ctx.stroke();
             }
-        } else if (patternType === 2) {
+        } else if (patternNum === 2) {
+            // Squares
+            for (var i = 0; i < 8; i++) {
+                var size = 50 + i * 30;
+                ctx.strokeRect(centerX - size/2, centerY - size/2, size, size);
+            }
+        } else if (patternNum === 3) {
+            // Diagonal lines
+            for (var i = -700; i < 700; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i + 700, 700);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(700, i + 700);
+                ctx.stroke();
+            }
+        } else if (patternNum === 4) {
+            // Dots
+            var step = 50;
+            for (var x = 0; x < 700; x += step) {
+                for (var y = 0; y < 700; y += step) {
+                    ctx.fillStyle = "rgba(255,255,255,0.5)";
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        } else {
             // Spirals
             for (var i = 0; i < 200; i++) {
                 var t = i / 50;
                 var radius = t * 150;
-                var angle = t * Math.PI * 4 * (num % 5 + 1);
+                var angle = t * Math.PI * 4;
                 var x = centerX + Math.cos(angle) * radius;
                 var y = centerY + Math.sin(angle) * radius;
-                ctx.fillStyle = getAccentColor(tokenId, i);
+                ctx.fillStyle = "white";
                 ctx.fillRect(x, y, 4, 4);
             }
-        } else if (patternType === 3) {
-            // Grid
-            var step = 30 + (num % 20);
-            for (var x = 0; x < w; x += step) {
-                for (var y = 0; y < h; y += step) {
-                    ctx.fillStyle = getAccentColor(tokenId, x + y);
-                    ctx.fillRect(x, y, step - 2, step - 2);
-                }
-            }
-        } else {
-            // Circles pattern
-            for (var i = 0; i < 50; i++) {
-                var x = Math.random() * w;
-                var y = Math.random() * h;
-                var r = 5 + (num % 15);
-                ctx.fillStyle = getAccentColor(tokenId, i * 7);
-                ctx.beginPath();
-                ctx.arc(x, y, r, 0, Math.PI * 2);
-                ctx.fill();
-            }
         }
         
-        // Draw token info text
+        // Draw text
         ctx.fillStyle = "white";
-        ctx.font = "bold 20px monospace";
+        ctx.font = "bold 24px monospace";
         ctx.textAlign = "center";
-        ctx.shadowBlur = 0;
-        ctx.fillText("Token #" + tokenId, centerX, 50);
+        ctx.fillText("Art of Farcaster", 350, 50);
+        
+        ctx.font = "18px monospace";
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.fillText("Token #" + tokenId, 350, 100);
+        
+        // Simple rarity based on token number
+        var rarity = "Common";
+        if (num % 100 === 0) rarity = "Grail";
+        else if (num % 50 === 0) rarity = "Mythic";
+        else if (num % 20 === 0) rarity = "Rare";
+        else if (num % 10 === 0) rarity = "Uncommon";
         
         ctx.font = "14px monospace";
-        ctx.fillStyle = "rgba(255,255,255,0.8)";
-        ctx.fillText(currentTraits["Rarity Class"] + " " + currentTraits.Archetype, centerX, 80);
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        ctx.fillText("Rarity: " + rarity, 350, 140);
         
-        // Add Grail effect if applicable
-        if (currentTraits["Rarity Class"] === "Grail") {
-            ctx.font = "italic 12px monospace";
+        // Grail special effect
+        if (rarity === "Grail") {
+            ctx.font = "italic 16px monospace";
             ctx.fillStyle = "gold";
-            ctx.fillText("⚜️ GRAIL ⚜️", centerX, h - 20);
-        }
-    }
-    
-    function init() {
-        canvas = document.getElementById("artCanvas");
-        if (!canvas) {
-            console.error("Canvas not found");
-            return;
+            ctx.fillText("⚜️ GRAIL ⚜️", 350, 650);
+            
+            // Add gold glow
+            ctx.fillStyle = "rgba(255,215,0,0.2)";
+            ctx.fillRect(0, 0, 700, 700);
         }
         
-        canvas.width = 700;
-        canvas.height = 700;
-        ctx = canvas.getContext("2d");
-        
-        var params = new URLSearchParams(window.location.search);
-        tokenId = params.get("tokenId") || params.get("tid") || "1";
-        var txHash = params.get("txHash") || params.get("h") || "0x0";
-        
-        console.log("Loading token:", tokenId);
-        
-        var seed = getSeed(tokenId, txHash);
-        currentTraits = generateTraits(seed, tokenId);
-        
-        renderArt();
-        
-        console.log("Ready:", currentTraits);
+        console.log("Viewer ready for token", tokenId);
     }
     
+    // Start when DOM is ready
     if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", init);
+        document.addEventListener("DOMContentLoaded", startViewer);
     } else {
-        init();
+        startViewer();
     }
 })();
