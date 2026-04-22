@@ -587,7 +587,7 @@
                     let uy = (y / h) * 4.0 - 2.0;
                     ux *= w / h;
                     
-                    let transformed = applyCompositionTransform(ux, uy, currentTraits.Composition, zoom, offsetX, offsetY);
+                    let transformed = applyCompositionTransform(ux, uy, currentTraits.Composition, zoom, adjustedOffsetX, adjustedOffsetY);
                     let rx = transformed.x;
                     let ry = transformed.y;
                     
