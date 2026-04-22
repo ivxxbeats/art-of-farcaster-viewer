@@ -1,4 +1,4 @@
-﻿// Art of Farcaster Viewer - Complete with Awakened Engine
+﻿// Art of Farcaster Viewer - Original with Awakened Engine
 (function() {
     "use strict";
     
@@ -14,53 +14,66 @@
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 liveIntensity = data.intensity || 0.5;
-                if (data.awakenedEngine && data.awakenedEngine.progression) {
-                    awakenedLevel = data.awakenedEngine.progression;
-                } else if (liveIntensity > 0.8) {
-                    awakenedLevel = "ascended";
-                } else if (liveIntensity > 0.55) {
-                    awakenedLevel = "awakened";
-                } else {
-                    awakenedLevel = "base";
-                }
-                console.log("Intensity:", liveIntensity, "Level:", awakenedLevel);
-                
-                // Redraw with new intensity
+                if (liveIntensity > 0.8) awakenedLevel = "ascended";
+                else if (liveIntensity > 0.55) awakenedLevel = "awakened";
+                else awakenedLevel = "base";
                 drawArt();
             })
-            .catch(function(e) { console.log("Intensity fetch failed", e); });
+            .catch(function(e) { console.log("Intensity fetch failed"); });
     }
     
-    // Apply awakened visual effects
+    // Fractal calculation
+    function fractal(x, y, maxIter, seed) {
+        var cx = x * 3.5 - 2.5;
+        var cy = y * 3.5 - 2.0;
+        var zx = 0, zy = 0;
+        var iter = 0;
+        var smooth = 0;
+        
+        for (iter = 0; iter < maxIter; iter++) {
+            var zx2 = zx * zx;
+            var zy2 = zy * zy;
+            if (zx2 + zy2 > 4.0) break;
+            var xt = zx2 - zy2 + cx;
+            zy = 2.0 * zx * zy + cy;
+            zx = xt;
+        }
+        
+        if (iter < maxIter) {
+            var log_zn = Math.log(zx * zx + zy * zy) / 2;
+            var nu = Math.log(log_zn / Math.log(2)) / Math.log(2);
+            smooth = (iter + 1 - nu) / maxIter;
+        } else {
+            smooth = 1.0;
+        }
+        
+        return Math.min(0.98, Math.max(0.02, smooth));
+    }
+    
+    // Apply awakened effects to drawing
     function applyAwakenedEffects(ctx, w, h, level, intensity) {
         if (level === "ascended") {
             ctx.shadowBlur = 15;
             ctx.shadowColor = "rgba(255,100,255,0.5)";
-            for (var i = 0; i < 50; i++) {
-                ctx.fillStyle = "rgba(255,100,255," + (Math.random() * 0.3) + ")";
+            for (var i = 0; i < 80; i++) {
+                ctx.fillStyle = "rgba(255,100,255," + (Math.random() * 0.2) + ")";
                 ctx.fillRect(Math.random() * w, Math.random() * h, 3, 3);
-            }
-            for (var y = 0; y < h; y += 8) {
-                ctx.fillStyle = "rgba(0,0,0,0.1)";
-                ctx.fillRect(0, y, w, 2);
             }
         } else if (level === "awakened") {
             ctx.shadowBlur = 8;
             ctx.shadowColor = "rgba(100,200,255,0.3)";
-            for (var i = 0; i < 20; i++) {
-                ctx.fillStyle = "rgba(100,200,255," + (Math.random() * 0.2) + ")";
+            for (var i = 0; i < 40; i++) {
+                ctx.fillStyle = "rgba(100,200,255," + (Math.random() * 0.15) + ")";
                 ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2);
             }
         }
         ctx.shadowBlur = 0;
         
         // Intensity meter
-        if (intensity) {
-            ctx.fillStyle = "rgba(0,0,0,0.5)";
-            ctx.fillRect(10, 670, 100, 8);
-            ctx.fillStyle = level === "ascended" ? "#ff00ff" : (level === "awakened" ? "#00ffff" : "#00ff00");
-            ctx.fillRect(10, 670, intensity * 100, 8);
-        }
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(10, 670, 100, 8);
+        ctx.fillStyle = level === "ascended" ? "#ff00ff" : (level === "awakened" ? "#00ffff" : "#00ff00");
+        ctx.fillRect(10, 670, intensity * 100, 8);
     }
     
     function drawArt() {
@@ -70,69 +83,51 @@
         var tokenId = params.get("tokenId") || params.get("tid") || "1";
         var tokenNum = parseInt(tokenId) || 1;
         
-        // Unique colors based on token
-        var hue = (tokenNum * 37) % 360;
-        var sat = 50 + (tokenNum % 50);
-        var light = 40 + (tokenNum % 40);
+        var w = 700, h = 700;
+        var seed = tokenNum;
+        var maxIter = 80 + (seed % 120);
+        var hueBase = (seed * 37) % 360;
         
-        // Background
-        ctx.fillStyle = "hsl(" + hue + ", " + sat + "%, " + light + "%)";
-        ctx.fillRect(0, 0, 700, 700);
+        // Create image data for faster rendering
+        var imgData = ctx.createImageData(w, h);
+        var data = imgData.data;
         
-        // Pattern based on token
-        var centerX = 350;
-        var centerY = 350;
-        var patternType = tokenNum % 5;
-        
-        ctx.strokeStyle = "white";
-        ctx.fillStyle = "white";
-        ctx.lineWidth = 2;
-        
-        if (patternType === 0) {
-            for (var i = 1; i <= 5; i++) {
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, i * 50, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-        } else if (patternType === 1) {
-            for (var i = 0; i < 12; i++) {
-                var angle = i * 30 * Math.PI / 180;
-                var x2 = centerX + Math.cos(angle) * 300;
-                var y2 = centerY + Math.sin(angle) * 300;
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.lineTo(x2, y2);
-                ctx.stroke();
-            }
-        } else if (patternType === 2) {
-            for (var i = 0; i < 8; i++) {
-                var size = 50 + i * 30;
-                ctx.strokeRect(centerX - size/2, centerY - size/2, size, size);
-            }
-        } else if (patternType === 3) {
-            for (var x = 0; x < 700; x += 50) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, 700);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(0, x);
-                ctx.lineTo(700, x);
-                ctx.stroke();
-            }
-        } else {
-            for (var i = 0; i < 200; i++) {
-                var t = i / 50;
-                var radius = t * 150;
-                var angle = t * Math.PI * 4;
-                var x = centerX + Math.cos(angle) * radius;
-                var y = centerY + Math.sin(angle) * radius;
-                ctx.fillRect(x, y, 4, 4);
+        // Render fractal
+        for (var y = 0; y < h; y++) {
+            for (var x = 0; x < w; x++) {
+                var ux = x / w;
+                var uy = y / h;
+                
+                var val = fractal(ux, uy, maxIter, seed);
+                
+                // Color based on fractal value and token
+                var hue = (hueBase + val * 360) % 360;
+                var sat = 50 + (seed % 50);
+                var light = 30 + val * 40;
+                
+                // Adjust based on awakened level
+                if (awakenedLevel === "ascended") {
+                    light = Math.min(90, light + 20);
+                    sat = Math.min(100, sat + 30);
+                } else if (awakenedLevel === "awakened") {
+                    light = Math.min(80, light + 10);
+                    sat = Math.min(90, sat + 15);
+                }
+                
+                var rgb = hslToRgb(hue, sat, light);
+                
+                var idx = (y * w + x) * 4;
+                data[idx] = rgb.r;
+                data[idx+1] = rgb.g;
+                data[idx+2] = rgb.b;
+                data[idx+3] = 255;
             }
         }
         
-        // Apply Awakened Engine effects
-        applyAwakenedEffects(ctx, 700, 700, awakenedLevel, liveIntensity);
+        ctx.putImageData(imgData, 0, 0);
+        
+        // Apply awakened effects
+        applyAwakenedEffects(ctx, w, h, awakenedLevel, liveIntensity);
         
         // Token text
         ctx.fillStyle = "white";
@@ -162,7 +157,7 @@
             ctx.font = "italic 16px monospace";
             ctx.fillText("⚜️ GRAIL ⚜️", 350, 650);
             ctx.fillStyle = "rgba(255,215,0,0.15)";
-            ctx.fillRect(0, 0, 700, 700);
+            ctx.fillRect(0, 0, w, h);
         }
         
         // Update info display
@@ -170,8 +165,32 @@
         if (infoEl) {
             infoEl.innerHTML = "Token #" + tokenId + " | " + awakenedLevel.toUpperCase() + " | " + Math.round(liveIntensity * 100) + "%";
         }
-        
-        console.log("Drawn - Token:", tokenId, "Rarity:", rarity, "Level:", awakenedLevel);
+    }
+    
+    // Helper: HSL to RGB
+    function hslToRgb(h, s, l) {
+        h = h / 360;
+        s = s / 100;
+        l = l / 100;
+        var r, g, b;
+        if (s === 0) {
+            r = g = b = l;
+        } else {
+            var hue2rgb = function(p, q, t) {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1/6) return p + (q - p) * 6 * t;
+                if (t < 1/2) return q;
+                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                return p;
+            };
+            var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            var p = 2 * l - q;
+            r = hue2rgb(p, q, h + 1/3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1/3);
+        }
+        return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
     }
     
     // Download image
@@ -187,10 +206,7 @@
     // Random token
     function randomToken() {
         var newId = Math.floor(Math.random() * 10000) + 1;
-        var url = new URL(window.location.href);
-        url.searchParams.set("tokenId", newId);
-        url.searchParams.set("txHash", "0x" + Math.random().toString(36).substring(2, 10));
-        window.location.href = url.toString();
+        window.location.href = "?tokenId=" + newId + "&txHash=0x" + Math.random().toString(36).substring(2, 10);
     }
     
     // Initialize
@@ -249,7 +265,6 @@
         fetchIntensity();
         setInterval(function() {
             fetchIntensity();
-            drawArt();
         }, 30000);
     }
     
@@ -258,4 +273,4 @@
     } else {
         init();
     }
-})();// Force rebuild - 2026-04-22 02:32:35
+})();
