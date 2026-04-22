@@ -724,6 +724,7 @@
             const data = imgData.data;
             const isGrail = (currentTraits["Rarity Class"] === RARITY_CLASSES.GRAIL);
             const intensity = liveIntensity;
+            const awakeningLevel = awakenedLevel;
             const time = canonicalTimeValue + now * 0.0015;
             const zoom = baseTraits?.zoom || 1.0;
             let offsetX = baseTraits?.offsetX || 0;
@@ -767,8 +768,10 @@
                     ux *= w / h;
                     
                     let transformed = applyCompositionTransform(ux, uy, currentTraits.Composition, zoom, adjustedOffsetX, adjustedOffsetY, engineConfig);
-                    let rx = transformed.x;
-                    let ry = transformed.y;
+                    // Signature Phase Warp
+                    const phaseShift = signaturePhase(transformed.x, transformed.y, time, masterSeed, awakeningLevel);
+                    let rx = transformed.x + phaseShift;
+                    let ry = transformed.y + phaseShift;
                     
                     // Apply awakening to engine
                     let awakened = applyAwakeningToEngine(rx, ry, engineConfig, awakenedLevel, time);
@@ -796,7 +799,8 @@
                             t = fractalVal * fractalWeight + patternVal * patternWeight;
                         }
                     }
-                    t = Math.max(0.03, Math.min(0.97, t));
+                    t = signatureContrast(t, awakeningLevel);
+                        t = Math.max(0.03, Math.min(0.97, t));
                     
                     if (isGrail) {
                         if (grailDriver === "Interference") {
@@ -806,6 +810,7 @@
                         } else if (grailDriver === "EchoLoop") {
                             t += Math.sin(t * 10 + time) * 0.3;
                         }
+                        t = signatureContrast(t, awakeningLevel);
                         t = Math.max(0.03, Math.min(0.97, t));
                         t = Math.pow(t, 0.3);
                     }
