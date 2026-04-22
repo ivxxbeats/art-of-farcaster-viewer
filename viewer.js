@@ -1,6 +1,6 @@
-// ============================================================
-// ART OF FARCASTER - VIEWER v19.0
-// Trimmed to match sketch.js: Structure Type, trimmed compositions, Anomaly
+﻿// ============================================================
+// ART OF FARCASTER - VIEWER v19.1 (OPTIMIZED)
+// Matches mint performance: 320x320 offscreen, reduced operations
 // ============================================================
 
 (function() {
@@ -9,9 +9,8 @@
     // ============================================================
     // CONFIG
     // ============================================================
-    const PHASES = { CALM: 0, BUILDUP: 1, CHAOS: 2, DECAY: 3 };
     const LOG2 = Math.log(2);
-
+    
     const RARITY_CLASSES = {
         COMMON: "Common",
         UNCOMMON: "Uncommon",
@@ -19,7 +18,7 @@
         MYTHIC: "Mythic",
         GRAIL: "Grail"
     };
-
+    
     const ARCHETYPES = ["Signal", "Drift", "Rift", "Core", "Prism", "Void"];
     const ANCHOR_FORMS = ["Aether", "PrismHeart", "Faultline", "Gate", "Nexus", "Bloom"];
     
@@ -27,6 +26,9 @@
     // ENGINE TYPES
     // ============================================================
     const ENGINE_TYPES = ["Canonical", "Echo", "Rupture"];
+    const PRIMARY_DRIVERS = ["Fractal", "Pattern", "Color", "Composition"];
+    const STRUCTURE_TYPES = ["Nova", "Lattice", "Field", "Wave", "Grid", "Drift"];
+    const SPATIAL_BEHAVIORS = ["Radial", "Spiral", "FlowField", "Kaleido", "Vortex", "Asymmetrical"];
     
     function weightedPick(items, weights, rng) {
         const r = rng();
@@ -37,73 +39,6 @@
         }
         return items[items.length - 1];
     }
-    
-    function rollEngineType(rng, rarityClass) {
-        if (rarityClass === "Grail") {
-            return weightedPick(["Canonical", "Echo", "Rupture"], [0.10, 0.20, 0.70], rng);
-        }
-        return weightedPick(["Canonical", "Echo", "Rupture"], [0.78, 0.19, 0.03], rng);
-    }
-    
-    // ============================================================
-    // ANOMALY (was Grail Driver)
-    // ============================================================
-    const ANOMALY_CLASSES = ["Interference", "Collapse", "EchoLoop", "SpectralSplit"];
-    
-    function rollAnomalyClass(rng) {
-        return weightedPick(ANOMALY_CLASSES, [0.25, 0.25, 0.25, 0.25], rng);
-    }
-    
-    // ============================================================
-    // ENGINE CONFIGURATION
-    // ============================================================
-    function getEngineConfig(engineType) {
-        switch (engineType) {
-            case "Canonical":
-                return {
-                    fractalWeight: 0.7,
-                    patternWeight: 0.3,
-                    allowedCompositions: ["Radial", "Spiral", "Kaleido"],
-                    name: "Canonical"
-                };
-            case "Echo":
-                return {
-                    fractalWeight: 0.35,
-                    patternWeight: 0.65,
-                    allowedCompositions: ["FlowField", "Vortex", "Asymmetrical"],
-                    name: "Echo"
-                };
-            case "Rupture":
-                return {
-                    fractalWeight: 0.5,
-                    patternWeight: 0.5,
-                    allowedCompositions: ["Asymmetrical", "Vortex", "Radial"],
-                    name: "Rupture"
-                };
-            default:
-                return {
-                    fractalWeight: 0.5,
-                    patternWeight: 0.5,
-                    allowedCompositions: ["Radial"],
-                    name: "Canonical"
-                };
-        }
-    }
-    
-    // ============================================================
-    // PRIMARY DRIVER
-    // ============================================================
-    const PRIMARY_DRIVERS = ["Fractal", "Pattern", "Color", "Composition"];
-    
-    // ============================================================
-    // STRUCTURE TYPE (merged Fractal + Pattern)
-    // ============================================================
-    const STRUCTURE_TYPES = ["Nova", "Lattice", "Field", "Wave", "Grid", "Drift"];
-    
-    // ============================================================
-    // SPATIAL BEHAVIOR (trimmed composition list)
-    // ============================================================
-    const SPATIAL_BEHAVIORS = ["Radial", "Spiral", "FlowField", "Kaleido", "Vortex", "Asymmetrical"];
     
     // ============================================================
     // LIVE INTENSITY API
@@ -120,51 +55,10 @@
                 if (liveIntensity > 0.8) awakenedLevel = "ascended";
                 else if (liveIntensity > 0.55) awakenedLevel = "awakened";
                 else awakenedLevel = "base";
-                console.log("Intensity:", liveIntensity, "Level:", awakenedLevel);
             })
-            .catch(function(e) { console.log("Intensity fetch failed"); });
-    }
-
-    // ============================================================
-    // SIGNATURE SYSTEM
-    // ============================================================
-    function signaturePhase(x, y, time, seed, awakeningLevel) {
-        let amplitude = 0.04;
-        if (awakeningLevel === "awakened") amplitude = 0.08;
-        else if (awakeningLevel === "ascended") amplitude = 0.12;
-        
-        const f1 = Math.sin(x * 2.3 + y * 1.7 + time * 0.6 + seed * 0.0001);
-        const f2 = Math.cos(x * 1.1 - y * 2.9 - time * 0.4);
-        const p = (f1 + f2) * 0.5;
-        return p * amplitude;
+            .catch(function(e) {});
     }
     
-    function signatureColor(t, time, awakeningLevel) {
-        const base = t * 30 + time;
-        let r = Math.sin(base) * 0.5 + 0.5;
-        let g = Math.sin(base + 2.094) * 0.5 + 0.5;
-        let b = Math.sin(base + 4.188) * 0.5 + 0.5;
-        
-        if (awakeningLevel === "awakened") {
-            r *= 1.1; g *= 1.1; b *= 1.1;
-        } else if (awakeningLevel === "ascended") {
-            r *= 1.2; g *= 1.2; b *= 1.2;
-        }
-        
-        return { r: Math.min(0.95, r), g: Math.min(0.95, g), b: Math.min(0.95, b) };
-    }
-    
-    function signatureContrast(t, awakeningLevel) {
-        let k = 6.0;
-        if (awakeningLevel === "awakened") k = 8.0;
-        else if (awakeningLevel === "ascended") k = 10.0;
-        
-        let result = 1.0 / (1.0 + Math.exp(-k * (t - 0.5)));
-        const ridge = Math.abs(Math.sin(t * Math.PI));
-        result = result * 0.9 + ridge * 0.1;
-        return Math.max(0.02, Math.min(0.98, result));
-    }
-
     // ============================================================
     // DETERMINISTIC HELPERS
     // ============================================================
@@ -177,7 +71,7 @@
         }
         return hash >>> 0;
     }
-
+    
     function makeSeededRand(seed) {
         let state = seed >>> 0;
         return function() {
@@ -188,7 +82,7 @@
             return (state >>> 0) / 0xffffffff;
         };
     }
-
+    
     function splitSeed(seed, streamId) { 
         let state = (seed ^ (streamId * 0x9e3779b9)) >>> 0; 
         return function() { 
@@ -208,7 +102,23 @@
     function getDeterministicPhase(masterSeed, intensity) {
         return Math.floor((masterSeed + intensity * 10000)) % 4;
     }
-
+    
+    // ============================================================
+    // ENGINE CONFIGURATION
+    // ============================================================
+    function getEngineConfig(engineType) {
+        switch (engineType) {
+            case "Canonical":
+                return { fractalWeight: 0.7, patternWeight: 0.3, allowedCompositions: ["Radial", "Spiral", "Kaleido"], name: "Canonical" };
+            case "Echo":
+                return { fractalWeight: 0.35, patternWeight: 0.65, allowedCompositions: ["FlowField", "Vortex", "Asymmetrical"], name: "Echo" };
+            case "Rupture":
+                return { fractalWeight: 0.5, patternWeight: 0.5, allowedCompositions: ["Asymmetrical", "Vortex", "Radial"], name: "Rupture" };
+            default:
+                return { fractalWeight: 0.5, patternWeight: 0.5, allowedCompositions: ["Radial"], name: "Canonical" };
+        }
+    }
+    
     // ============================================================
     // TRAIT GENERATION
     // ============================================================
@@ -219,7 +129,7 @@
             rng
         );
     }
-
+    
     function rollArchetype(rarityClass, rng) {
         if (rarityClass === RARITY_CLASSES.GRAIL) {
             return weightedPick(ARCHETYPES, [0.12, 0.14, 0.18, 0.12, 0.28, 0.16], rng);
@@ -232,7 +142,7 @@
             default: return "Signal";
         }
     }
-
+    
     function rollAnchorForm(archetype, rng) {
         switch (archetype) {
             case "Signal": return weightedPick(ANCHOR_FORMS, [0.10, 0.28, 0.08, 0.30, 0.18, 0.06], rng);
@@ -244,20 +154,18 @@
             default: return "Aether";
         }
     }
-
+    
     function generateCollectionTraits(rng, tokenNum) {
         const rarityClass = rollRarityClass(rng);
         const archetype = rollArchetype(rarityClass, rng);
         const anchorForm = rollAnchorForm(archetype, rng);
-        const engineType = rollEngineType(rng, rarityClass);
+        const engineType = weightedPick(ENGINE_TYPES, rarityClass === "Grail" ? [0.10, 0.20, 0.70] : [0.78, 0.19, 0.03], rng);
         const primaryDriver = weightedPick(PRIMARY_DRIVERS, [0.35, 0.25, 0.25, 0.15], rng);
         const engineConfig = getEngineConfig(engineType);
         
         const spatialBehavior = engineConfig.allowedCompositions[Math.floor(rng() * engineConfig.allowedCompositions.length)];
-        
         const colors = ["Ethereal", "Volcanic", "StellarDrift", "Nebula", "SolarFlare", "DeepVoid", "PrismCore", "AuroraBorealis"];
         const colorMood = colors[Math.floor(rng() * colors.length)];
-        
         const structureType = STRUCTURE_TYPES[Math.floor(rng() * STRUCTURE_TYPES.length)];
         
         const traits = {
@@ -273,24 +181,20 @@
         };
         
         if (rarityClass === "Grail") {
-            traits["Anomaly Class"] = rollAnomalyClass(rng);
+            traits["Anomaly Class"] = weightedPick(["Interference", "Collapse", "EchoLoop", "SpectralSplit"], [0.25, 0.25, 0.25, 0.25], rng);
         }
         
         return traits;
     }
-
+    
     function generateBaseTraits(seed, tokenId) {
         const streamRNGs = {};
-        for(let i = 1; i <= 7; i++) {
-            streamRNGs[i] = splitSeed(seed, i);
-        }
+        for(let i = 1; i <= 7; i++) streamRNGs[i] = splitSeed(seed, i);
         
         const tokenOffset = parseInt(tokenId, 10) || 0;
         const steps = (tokenOffset * 997) % 1000;
         for (let i = 0; i < steps; i++) {
-            for(let s = 1; s <= 7; s++) {
-                if(streamRNGs[s]) streamRNGs[s]();
-            }
+            for(let s = 1; s <= 7; s++) if(streamRNGs[s]) streamRNGs[s]();
         }
         
         const traitsRNG = streamRNGs[1];
@@ -301,10 +205,8 @@
         const offsetVarietyY = (varietyRNG() - 0.5) * 2.0;
         const iterVariety = 40 + Math.floor(varietyRNG() * 200);
         
-        // Density internal (not exported)
         const densityIndex = Math.floor(varietyRNG() * 4);
-        let iterMult = 1.0;
-        let layers = 3;
+        let iterMult = 1.0, layers = 3;
         if (densityIndex === 0) { iterMult = 0.6; layers = 2; }
         else if (densityIndex === 2) { iterMult = 1.2; layers = 3; }
         else if (densityIndex === 3) { iterMult = 1.3; layers = 3; }
@@ -318,7 +220,7 @@
             layers: layers
         };
     }
-
+    
     // ============================================================
     // RENDER HELPERS
     // ============================================================
@@ -333,87 +235,7 @@
         }
         return { x: x, y: y };
     }
-
-    // ============================================================
-    // ANIMATION VALUES
-    // ============================================================
-    let animatedPulse = 0.94;
-    let animatedHueShift = 0;
-    let startTime = null;
     
-    function updateAnimation(now) {
-        animatedPulse = 0.94 + Math.sin(now * 0.0005) * 0.03;
-        animatedHueShift = Math.sin(now * 0.00025) * 360 * 0.015;
-    }
-
-    // ============================================================
-    // INTENSITY EFFECTS
-    // ============================================================
-    function applyIntensityEffects(ctx, w, h, intensity, now) {
-        if (intensity > 0.2) {
-            const noiseAmount = 0.01 + intensity * 0.025;
-            for (var i = 0; i < 150; i++) {
-                if (Math.random() < noiseAmount) {
-                    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.15})`;
-                    ctx.fillRect(Math.random() * w, Math.random() * h, 1, 1);
-                }
-            }
-        }
-        
-        if (Math.random() < 0.0035 * intensity) {
-            const shiftX = (Math.random() - 0.5) * 2;
-            const shiftY = (Math.random() - 0.5) * 1;
-            ctx.drawImage(ctx.canvas, shiftX, shiftY);
-        }
-        
-        if (Math.random() < 0.005 * intensity) {
-            const imgData = ctx.getImageData(0, 0, w, h);
-            const data = imgData.data;
-            for (var i = 0; i < data.length; i += 4) {
-                if (Math.random() < 0.05) {
-                    const temp = data[i];
-                    data[i] = data[i+2];
-                    data[i+2] = temp;
-                }
-            }
-            ctx.putImageData(imgData, 0, 0);
-        }
-        
-        if (Math.random() < 0.0025 * intensity) {
-            for (var i = 0; i < 10; i++) {
-                ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.3})`;
-                ctx.fillRect(Math.floor(Math.random() * w), Math.floor(Math.random() * h), 1, 1);
-            }
-        }
-        
-        if (Math.random() < 0.001 * intensity) {
-            const tearY = Math.floor(Math.random() * h);
-            const tearHeight = 2;
-            const tearWidth = w * 0.3;
-            const tearX = (Math.random() - 0.5) * 20;
-            ctx.drawImage(ctx.canvas, 0, tearY, w, tearHeight, tearX, tearY, tearWidth, tearHeight);
-        }
-        
-        if (intensity > 0.3) {
-            const vignetteStrength = intensity * 0.12;
-            const gradient = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
-            gradient.addColorStop(0, 'rgba(0,0,0,0)');
-            gradient.addColorStop(0.6, `rgba(0,0,0,${vignetteStrength * 0.2})`);
-            gradient.addColorStop(1, `rgba(0,0,0,${vignetteStrength})`);
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, w, h);
-        }
-        
-        ctx.fillStyle = "rgba(0,0,0,0.5)";
-        ctx.fillRect(10, 670, 100, 6);
-        ctx.fillStyle = `hsl(${intensity * 120}, 100%, 50%)`;
-        ctx.fillRect(10, 670, intensity * 100, 6);
-        
-        const hue = (now * 0.02 + intensity * 360) % 360;
-        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${intensity * 0.025})`;
-        ctx.fillRect(0, 0, w, h);
-    }
-
     // ============================================================
     // FRACTAL ENGINES
     // ============================================================
@@ -439,7 +261,7 @@
         }
         return Math.max(0.02, Math.min(0.98, smooth));
     }
-
+    
     function getDepthFractalValue(x, y, maxIter, layers, iterMult) {
         let depth = 0;
         for (let i = 0; i < layers; i++) {
@@ -448,7 +270,7 @@
         }
         return depth / layers;
     }
-
+    
     function getPatternValue(x, y, time, engineConfig) {
         const r = Math.sqrt(x * x + y * y);
         const a = Math.atan2(y, x);
@@ -468,7 +290,7 @@
             return Math.max(0.02, Math.min(0.98, (val + 0.5)));
         }
     }
-
+    
     function applyCompositionTransform(ux, uy, composition, zoom, offsetX, offsetY) {
         let x = ux / zoom + offsetX;
         let y = uy / zoom + offsetY;
@@ -518,7 +340,7 @@
         }
         return { x, y };
     }
-
+    
     function getRichColor(t, colorMood, time, primaryDriver) {
         let r, g, b;
         
@@ -548,9 +370,9 @@
         }
         return { r: Math.min(0.85, Math.max(0.15, r)), g: Math.min(0.85, Math.max(0.15, g)), b: Math.min(0.85, Math.max(0.15, b)) };
     }
-
+    
     // ============================================================
-    // COMPLEMENTARY TRAITS UI (Trimmed: only Energy + Affinity)
+    // COMPLEMENTARY TRAITS UI
     // ============================================================
     function getComplementaryTraits(rarityClass, awakenedLevel, intensity, tokenNum, primaryDriver, engineType) {
         let mood = intensity > 0.8 ? "Intense" : (intensity > 0.6 ? "Energetic" : (intensity > 0.4 ? "Balanced" : (intensity > 0.2 ? "Calm" : "Dormant")));
@@ -565,23 +387,71 @@
             infoEl.innerHTML = `${complementary.engineType} · ${complementary.mood} · ${complementary.element} · Driver: ${complementary.primaryDriver}`;
         }
     }
-
+    
     // ============================================================
-    // RENDER ENGINE
+    // INTENSITY EFFECTS (Lightweight)
+    // ============================================================
+    let lastFrameTime = 0;
+    let frameCount = 0;
+    
+    function applyIntensityEffects(ctx, w, h, intensity, now) {
+        // Only apply every 4th frame for performance
+        frameCount++;
+        if (frameCount % 4 !== 0) return;
+        
+        if (intensity > 0.2) {
+            const noiseAmount = 0.008 + intensity * 0.02;
+            for (var i = 0; i < 60; i++) {
+                if (Math.random() < noiseAmount) {
+                    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.12})`;
+                    ctx.fillRect(Math.random() * w, Math.random() * h, 1, 1);
+                }
+            }
+        }
+        
+        // Glitch - reduced frequency
+        if (Math.random() < 0.002 * intensity) {
+            const shiftX = (Math.random() - 0.5) * 2;
+            ctx.drawImage(ctx.canvas, shiftX, 0);
+        }
+        
+        // Vignette - lightweight
+        if (intensity > 0.3) {
+            const vignetteStrength = intensity * 0.08;
+            const gradient = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
+            gradient.addColorStop(0, 'rgba(0,0,0,0)');
+            gradient.addColorStop(0.7, `rgba(0,0,0,${vignetteStrength * 0.3})`);
+            gradient.addColorStop(1, `rgba(0,0,0,${vignetteStrength})`);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, w, h);
+        }
+        
+        // Intensity meter
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(10, 670, 100, 4);
+        ctx.fillStyle = `hsl(${intensity * 120}, 100%, 50%)`;
+        ctx.fillRect(10, 670, intensity * 100, 4);
+    }
+    
+    // ============================================================
+    // RENDER ENGINE (Optimized - 320x320, matches mint)
     // ============================================================
     let canvas, ctx;
     let offscreen, offCtx;
-    let w = 420, h = 420;
+    let w = 320, h = 320;
     let currentTraits = null;
     let masterSeed = null;
     let baseTraits = null;
     let deterministicPhase = 0;
     let canonicalTimeValue = 0;
     let tokenId = null;
+    let animationId = null;
+    let startTime = null;
+    let frameTime = 0;
     
     function updateOffscreen() {
-        const newW = 420;
-        const newH = 420;
+        const newW = 320;
+        const newH = 320;
         if (!offscreen || offscreen.width !== newW || offscreen.height !== newH) {
             offscreen = document.createElement('canvas');
             offscreen.width = newW;
@@ -592,22 +462,25 @@
         h = offscreen.height;
     }
     
+    // Gentle animation (lightweight)
+    let animatedPulse = 0.96;
+    let animTime = 0;
+    
     function renderFrame(now) {
         if (!currentTraits || !ctx) return;
         
+        animTime = now;
+        animatedPulse = 0.96 + Math.sin(now * 0.0005) * 0.02;
+        
         try {
-            updateAnimation(now);
             updateOffscreen();
-            
             const imgData = offCtx.createImageData(w, h);
             const data = imgData.data;
-            const isGrailFlag = (currentTraits["Rarity Class"] === RARITY_CLASSES.GRAIL);
             const intensity = liveIntensity;
-            const awakeningLevel = awakenedLevel;
-            const time = canonicalTimeValue + now * 0.0015;
+            const time = canonicalTimeValue + now * 0.001;
             const zoom = baseTraits?.zoom || 1.0;
-            let offsetX = baseTraits?.offsetX || 0;
-            let offsetY = baseTraits?.offsetY || 0;
+            const offsetX = baseTraits?.offsetX || 0;
+            const offsetY = baseTraits?.offsetY || 0;
             const maxIter = baseTraits?.baseMaxIter || 120;
             const layers = baseTraits?.layers || 3;
             const iterMult = baseTraits?.iterMult || 1.0;
@@ -617,6 +490,7 @@
             const primaryDriver = currentTraits["Primary Driver"];
             const isRupture = engineConfig.name === "Rupture";
             const isEcho = engineConfig.name === "Echo";
+            const isGrailFlag = currentTraits["Rarity Class"] === RARITY_CLASSES.GRAIL;
             const anomalyClass = currentTraits["Anomaly Class"];
             
             const complementary = getComplementaryTraits(currentTraits["Rarity Class"], awakenedLevel, liveIntensity, tokenNum, primaryDriver, engineConfig.name);
@@ -625,11 +499,8 @@
             const fw = engineConfig.fractalWeight;
             const pw = engineConfig.patternWeight;
             
-            const phi = 1.618;
-            const goldenX = w / phi;
-            const goldenY = h / phi;
-            const goldenOffsetX = (goldenX - w/2) / w * 0.3;
-            const goldenOffsetY = (goldenY - h/2) / h * 0.3;
+            const goldenOffsetX = (w / 1.618 - w/2) / w * 0.3;
+            const goldenOffsetY = (h / 1.618 - h/2) / h * 0.3;
             const adjustedOffsetX = offsetX + goldenOffsetX;
             const adjustedOffsetY = offsetY + goldenOffsetY;
             
@@ -640,15 +511,8 @@
                     ux *= w / h;
                     
                     let transformed = applyCompositionTransform(ux, uy, currentTraits["Spatial Behavior"], zoom, adjustedOffsetX, adjustedOffsetY);
-                    
-                    const phaseShift = signaturePhase(transformed.x, transformed.y, time, masterSeed, awakeningLevel);
-                    let rx = transformed.x + phaseShift;
-                    let ry = transformed.y + phaseShift;
-                    
-                    if (isGrailFlag && anomalyClass) {
-                        rx += phaseShift * 0.05;
-                        ry += phaseShift * 0.05;
-                    }
+                    let rx = transformed.x;
+                    let ry = transformed.y;
                     
                     let geo = applyArchetypeGeometry(currentTraits["Archetype"], rx, ry);
                     rx = geo.x;
@@ -673,31 +537,20 @@
                     }
                     t = Math.max(0.03, Math.min(0.97, t));
                     
-                    t = signatureContrast(t, awakeningLevel);
-                    
                     if (isGrailFlag && anomalyClass) {
-                        if (anomalyClass === "Interference") {
-                            t = Math.abs(fractalVal - patternVal);
-                        } else if (anomalyClass === "Collapse") {
-                            t = Math.min(fractalVal, patternVal);
-                        } else if (anomalyClass === "EchoLoop") {
-                            t += Math.sin(t * 10) * 0.3;
-                        }
+                        if (anomalyClass === "Interference") t = Math.abs(fractalVal - patternVal);
+                        else if (anomalyClass === "Collapse") t = Math.min(fractalVal, patternVal);
+                        else if (anomalyClass === "EchoLoop") t += Math.sin(t * 10) * 0.3;
                         t = Math.max(0.03, Math.min(0.97, t));
                         t = Math.pow(t, 0.3);
                     }
                     
                     let { r, g, b } = getRichColor(t, currentTraits["Color Mood"] || "Neon", time, primaryDriver);
                     
-                    const sigColor = signatureColor(t, time, awakeningLevel);
-                    r = r * 0.7 + sigColor.r * 0.3;
-                    g = g * 0.7 + sigColor.g * 0.3;
-                    b = b * 0.7 + sigColor.b * 0.3;
-                    
-                    const pulse = animatedPulse;
-                    r = r * pulse;
-                    g = g * pulse;
-                    b = b * pulse;
+                    // Apply gentle pulse
+                    r = r * animatedPulse;
+                    g = g * animatedPulse;
+                    b = b * animatedPulse;
                     
                     const idx = (y * w + x) * 4;
                     data[idx] = Math.min(255, Math.max(0, Math.floor(r * 255)));
@@ -713,20 +566,6 @@
             
             applyIntensityEffects(ctx, 700, 700, liveIntensity, now);
             
-            if (engineConfig.name === "Rupture" || isGrailFlag) {
-                ctx.globalCompositeOperation = "lighter";
-                ctx.globalAlpha = 0.18;
-                ctx.drawImage(offscreen, 0, 0);
-                ctx.globalAlpha = 1.0;
-                ctx.globalCompositeOperation = "source-over";
-            }
-            
-            ctx.globalCompositeOperation = 'lighter';
-            ctx.globalAlpha = 0.12;
-            ctx.drawImage(offscreen, 0, 0);
-            ctx.globalAlpha = 1.0;
-            ctx.globalCompositeOperation = 'source-over';
-            
         } catch(e) {
             console.error("Render error:", e);
         }
@@ -736,7 +575,7 @@
         if (!startTime) startTime = timestamp;
         const elapsed = timestamp - startTime;
         renderFrame(elapsed);
-        requestAnimationFrame(animate);
+        animationId = requestAnimationFrame(animate);
     }
     
     function init() {
@@ -759,16 +598,12 @@
         masterSeed = getSeed(tokenId, txHash);
         
         const streamRNGs = {};
-        for(let i = 1; i <= 7; i++) {
-            streamRNGs[i] = splitSeed(masterSeed, i);
-        }
+        for(let i = 1; i <= 7; i++) streamRNGs[i] = splitSeed(masterSeed, i);
         
         const tokenOffset = parseInt(tokenId, 10) || 0;
         const steps = (tokenOffset * 997) % 1000;
         for (let i = 0; i < steps; i++) {
-            for(let s = 1; s <= 7; s++) {
-                if(streamRNGs[s]) streamRNGs[s]();
-            }
+            for(let s = 1; s <= 7; s++) if(streamRNGs[s]) streamRNGs[s]();
         }
         
         const traitsRNG = streamRNGs[1];
@@ -786,9 +621,9 @@
         setInterval(fetchIntensity, 30000);
         
         startTime = null;
-        requestAnimationFrame(animate);
+        animationId = requestAnimationFrame(animate);
         
-        console.log("Viewer ready - Token:", tokenId, "Engine:", currentTraits["Engine Type"], "Driver:", currentTraits["Primary Driver"]);
+        console.log("Viewer ready - Token:", tokenId);
     }
     
     if (document.readyState === 'loading') {
