@@ -1,6 +1,6 @@
 ﻿// ============================================================
 // ART OF FARCASTER - COMPLETE VIEWER
-// Matches sketch.js v8.0 with fractal variety
+// Dust/Noise effect + Subtle Glitches + Live Intensity
 // ============================================================
 
 (function() {
@@ -59,19 +59,13 @@
         else if (intensity > 0.4) flowState = "Flowing";
         else flowState = "Gentle";
         
-        let flowSubstate = "Steady";
-        if (flowState === "Rapid") flowSubstate = "Turbulent";
-        else if (flowState === "Surging") flowSubstate = "Pulsing";
-        else if (flowState === "Flowing") flowSubstate = "Graceful";
-        else flowSubstate = "Peaceful";
-        
         let flowColor = "#88aaff";
         if (flowState === "Rapid") flowColor = "#ff6688";
         else if (flowState === "Surging") flowColor = "#ffaa44";
         else if (flowState === "Flowing") flowColor = "#44ffaa";
         else flowColor = "#88aaff";
         
-        return { mood, phase, element, density, harmony, flowState, flowSubstate, flowColor };
+        return { mood, phase, element, density, harmony, flowState, flowColor };
     }
     
     function updateComplementaryUI(complementary) {
@@ -87,6 +81,7 @@
     // ============================================================
     let liveIntensity = 0.5;
     let awakenedLevel = "base";
+    let lastIntensity = 0.5;
     
     function fetchIntensity() {
         var url = "https://raw.githubusercontent.com/ivxxbeats/farcaster-intensity/main/intensity.json";
@@ -97,7 +92,7 @@
                 if (liveIntensity > 0.8) awakenedLevel = "ascended";
                 else if (liveIntensity > 0.55) awakenedLevel = "awakened";
                 else awakenedLevel = "base";
-                console.log("💪 Intensity:", liveIntensity, "| Level:", awakenedLevel);
+                console.log("Intensity:", liveIntensity, "Level:", awakenedLevel);
             })
             .catch(function(e) { console.log("Intensity fetch failed"); });
     }
@@ -267,26 +262,23 @@
     }
     
     // ============================================================
-    // ANIMATION VALUES (Subtle)
+    // ANIMATION VALUES (Gentle, always moving)
     // ============================================================
-    let animatedPulse = 0.85;
+    let animatedPulse = 0.92;
     let animatedHueShift = 0;
     let animatedGlitchX = 0;
     let animatedGlitchY = 0;
-    let animatedWavePhase = 0;
     let startTime = null;
     
     function updateAnimation(now) {
-        const speed = awakenedLevel === "ascended" ? 1.5 : (awakenedLevel === "awakened" ? 1.2 : 1.0);
+        // Gentle breathing (always present)
         animatedPulse = 0.92 + Math.sin(now * 0.0008) * 0.04;
-        animatedHueShift = Math.sin(now * 0.0004 * speed) * 360 * 0.08;
-        animatedGlitchX = Math.sin(now * 0.008) * 1.5;
-        animatedGlitchY = Math.cos(now * 0.006) * 1.2;
-        animatedWavePhase = (animatedWavePhase + 0.02 * speed) % (Math.PI * 2);
+        // Subtle hue drift
+        animatedHueShift = Math.sin(now * 0.0003) * 360 * 0.05;
     }
     
     // ============================================================
-    // FRACTAL ENGINES (Matching sketch.js)
+    // FRACTAL ENGINES
     // ============================================================
     function novaFractalCalc(x0, y0, maxIter) {
         let x = x0, y = y0;
@@ -375,7 +367,6 @@
         let r, g, b;
         const pulse = animatedPulse;
         const hueShift = animatedHueShift * 0.017;
-        const boost = awakenedLevel === "ascended" ? 1.08 : (awakenedLevel === "awakened" ? 1.04 : 1.0);
         
         switch(colorMood) {
             case "Ethereal":
@@ -425,11 +416,90 @@
                 break;
         }
         
-        r = Math.min(0.95, Math.max(0.05, r * pulse * boost));
-        g = Math.min(0.95, Math.max(0.05, g * pulse * boost));
-        b = Math.min(0.95, Math.max(0.05, b * pulse * boost));
+        r = Math.min(0.95, Math.max(0.05, r * pulse));
+        g = Math.min(0.95, Math.max(0.05, g * pulse));
+        b = Math.min(0.95, Math.max(0.05, b * pulse));
         
         return { r, g, b };
+    }
+    
+    // ============================================================
+    // LIVE INTENSITY EFFECTS (Dramatic, changes with API)
+    // ============================================================
+    
+    function applyIntensityEffects(ctx, w, h, intensity, awakenedLevel, now) {
+        // 1. DUST / NOISE EFFECT (replaces scanlines)
+        if (intensity > 0.2) {
+            const noiseAmount = 0.02 + intensity * 0.06;
+            for (var i = 0; i < 300; i++) {
+                if (Math.random() < noiseAmount) {
+                    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.15})`;
+                    ctx.fillRect(Math.random() * w, Math.random() * h, 1, 1);
+                }
+            }
+        }
+        
+        // 2. SUBTLE GLITCH EFFECTS
+        
+        // Micro-shift glitch
+        if (Math.random() < 0.008 * intensity) {
+            const shiftX = (Math.random() - 0.5) * 2;
+            const shiftY = (Math.random() - 0.5) * 1;
+            ctx.drawImage(ctx.canvas, shiftX, shiftY);
+        }
+        
+        // Color fringing (subtle RGB split)
+        if (Math.random() < 0.01 * intensity) {
+            const imgData = ctx.getImageData(0, 0, w, h);
+            const data = imgData.data;
+            for (var i = 0; i < data.length; i += 4) {
+                if (Math.random() < 0.05) {
+                    const temp = data[i];
+                    data[i] = data[i+2];
+                    data[i+2] = temp;
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+        
+        // Single pixel flicker
+        if (Math.random() < 0.005 * intensity) {
+            for (var i = 0; i < 20; i++) {
+                ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.3})`;
+                ctx.fillRect(Math.floor(Math.random() * w), Math.floor(Math.random() * h), 1, 1);
+            }
+        }
+        
+        // Horizontal tear (rare)
+        if (Math.random() < 0.002 * intensity) {
+            const tearY = Math.floor(Math.random() * h);
+            const tearHeight = 2;
+            const tearWidth = w * 0.3;
+            const tearX = (Math.random() - 0.5) * 20;
+            ctx.drawImage(ctx.canvas, 0, tearY, w, tearHeight, tearX, tearY, tearWidth, tearHeight);
+        }
+        
+        // 3. VIGNETTE PULSE (subtle darkening at edges)
+        if (intensity > 0.3) {
+            const vignetteStrength = intensity * 0.25;
+            const gradient = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
+            gradient.addColorStop(0, 'rgba(0,0,0,0)');
+            gradient.addColorStop(0.6, `rgba(0,0,0,${vignetteStrength * 0.2})`);
+            gradient.addColorStop(1, `rgba(0,0,0,${vignetteStrength})`);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, w, h);
+        }
+        
+        // 4. INTENSITY METER
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(10, 670, 100, 6);
+        ctx.fillStyle = `hsl(${intensity * 120}, 100%, 50%)`;
+        ctx.fillRect(10, 670, intensity * 100, 6);
+        
+        // 5. COLOR WASH (subtle overlay based on intensity)
+        const hue = (now * 0.02 + intensity * 360) % 360;
+        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${intensity * 0.05})`;
+        ctx.fillRect(0, 0, w, h);
     }
     
     // ============================================================
@@ -513,11 +583,8 @@
             
             for (let y = 0; y < h; y++) {
                 for (let x = 0; x < w; x++) {
-                    let offsetXpx = animatedGlitchX * (Math.random() - 0.5);
-                    let offsetYpx = animatedGlitchY * (Math.random() - 0.5);
-                    
-                    let ux = ((x + offsetXpx) / w) * 4.0 - 2.5;
-                    let uy = ((y + offsetYpx) / h) * 4.0 - 2.0;
+                    let ux = (x / w) * 4.0 - 2.5;
+                    let uy = (y / h) * 4.0 - 2.0;
                     ux *= w / h;
                     
                     let transformed = applyCompositionTransform(ux, uy, currentTraits.Composition, zoom, offsetX, offsetY);
@@ -544,7 +611,8 @@
             ctx.clearRect(0, 0, 700, 700);
             ctx.drawImage(offscreen, 0, 0, w, h, 0, 0, 700, 700);
             
-            applyAwakenedEffects(ctx, 700, 700, awakenedLevel, liveIntensity, now);\n            applyIntensityEffects(ctx, 700, 700, liveIntensity, awakenedLevel, now);
+            applyAwakenedEffects(ctx, 700, 700, awakenedLevel, liveIntensity, now);
+            applyIntensityEffects(ctx, 700, 700, liveIntensity, awakenedLevel, now);
             
             if (isGrail) {
                 for (var i = 0; i < 15; i++) {
@@ -580,7 +648,7 @@
         tokenId = params.get('tokenId') || params.get('tid') || '1';
         const txHash = params.get('txHash') || params.get('h') || '0x0';
         
-        console.log("🎨 Token:", tokenId);
+        console.log("Token:", tokenId);
         
         masterSeed = getSeed(tokenId, txHash);
         currentTraits = generateCollectionTraits(masterSeed, tokenId);
@@ -597,7 +665,7 @@
         startTime = null;
         requestAnimationFrame(animate);
         
-        console.log("✅ Viewer ready - Token:", tokenId, "Traits:", currentTraits);
+        console.log("Viewer ready - Token:", tokenId);
     }
     
     if (document.readyState === 'loading') {
