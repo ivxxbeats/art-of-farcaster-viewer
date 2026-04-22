@@ -597,8 +597,8 @@
     let startTime = null;
     
     function updateAnimation(now) {
-        animatedPulse = 0.96 + Math.sin(now * 0.0004) * 0.02;
-        animatedHueShift = Math.sin(now * 0.00015) * 360 * 0.02;
+        animatedPulse = 0.98 + Math.sin(now * 0.0003) * 0.01;
+        animatedHueShift = Math.sin(now * 0.0001) * 360 * 0.008;
     }
 
     // ============================================================
@@ -606,8 +606,8 @@
     // ============================================================
     function applyIntensityEffects(ctx, w, h, intensity, now) {
         if (intensity > 0.2) {
-            const noiseAmount = 0.015 + intensity * 0.04;
-            for (var i = 0; i < 300; i++) {
+            const noiseAmount = 0.008 + intensity * 0.02;
+            for (var i = 0; i < 150; i++) {
                 if (Math.random() < noiseAmount) {
                     ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.15})`;
                     ctx.fillRect(Math.random() * w, Math.random() * h, 1, 1);
@@ -615,13 +615,13 @@
             }
         }
         
-        if (Math.random() < 0.005 * intensity) {
+        if (Math.random() < 0.002 * intensity) {
             const shiftX = (Math.random() - 0.5) * 2;
             const shiftY = (Math.random() - 0.5) * 1;
             ctx.drawImage(ctx.canvas, shiftX, shiftY);
         }
         
-        if (Math.random() < 0.0065 * intensity) {
+        if (Math.random() < 0.0015 * intensity) {
             const imgData = ctx.getImageData(0, 0, w, h);
             const data = imgData.data;
             for (var i = 0; i < data.length; i += 4) {
@@ -634,14 +634,14 @@
             ctx.putImageData(imgData, 0, 0);
         }
         
-        if (Math.random() < 0.003 * intensity) {
-            for (var i = 0; i < 20; i++) {
+        if (Math.random() < 0.0015 * intensity) {
+            for (var i = 0; i < 10; i++) {
                 ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.3})`;
                 ctx.fillRect(Math.floor(Math.random() * w), Math.floor(Math.random() * h), 1, 1);
             }
         }
         
-        if (Math.random() < 0.0013 * intensity) {
+        if (Math.random() < 0.0006 * intensity) {
             const tearY = Math.floor(Math.random() * h);
             const tearHeight = 2;
             const tearWidth = w * 0.3;
@@ -650,7 +650,7 @@
         }
         
         if (intensity > 0.3) {
-            const vignetteStrength = intensity * 0.16;
+            const vignetteStrength = intensity * 0.08;
             const gradient = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
             gradient.addColorStop(0, 'rgba(0,0,0,0)');
             gradient.addColorStop(0.6, `rgba(0,0,0,${vignetteStrength * 0.2})`);
@@ -665,7 +665,7 @@
         ctx.fillRect(10, 670, intensity * 100, 6);
         
         const hue = (now * 0.02 + intensity * 360) % 360;
-        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${intensity * 0.032})`;
+        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${intensity * 0.015})`;
         ctx.fillRect(0, 0, w, h);
     }
 
@@ -834,14 +834,14 @@
             
             if (engineConfig.hasExtraGlow || isGrail) {
                 ctx.globalCompositeOperation = "lighter";
-                ctx.globalAlpha = 0.25;
+                ctx.globalAlpha = 0.12;
                 ctx.drawImage(offscreen, 0, 0);
                 ctx.globalAlpha = 1.0;
                 ctx.globalCompositeOperation = "source-over";
             }
             
             ctx.globalCompositeOperation = 'lighter';
-            ctx.globalAlpha = 0.15;
+            ctx.globalAlpha = 0.08;
             ctx.drawImage(offscreen, 0, 0);
             ctx.globalAlpha = 1.0;
             ctx.globalCompositeOperation = 'source-over';
