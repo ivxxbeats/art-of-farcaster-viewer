@@ -430,7 +430,7 @@
     function applyIntensityEffects(ctx, w, h, intensity, awakenedLevel, now) {
         // 1. DUST / NOISE EFFECT (replaces scanlines)
         if (intensity > 0.2) {
-            const noiseAmount = 0.02 + intensity * 0.06;
+            const noiseAmount = 0.015 + intensity * 0.04;
             for (var i = 0; i < 300; i++) {
                 if (Math.random() < noiseAmount) {
                     ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.15})`;
@@ -442,14 +442,14 @@
         // 2. SUBTLE GLITCH EFFECTS
         
         // Micro-shift glitch
-        if (Math.random() < 0.008 * intensity) {
+        if (Math.random() < 0.003 * intensity) {
             const shiftX = (Math.random() - 0.5) * 2;
             const shiftY = (Math.random() - 0.5) * 1;
             ctx.drawImage(ctx.canvas, shiftX, shiftY);
         }
         
         // Color fringing (subtle RGB split)
-        if (Math.random() < 0.01 * intensity) {
+        if (Math.random() < 0.0065 * intensity) {
             const imgData = ctx.getImageData(0, 0, w, h);
             const data = imgData.data;
             for (var i = 0; i < data.length; i += 4) {
@@ -463,7 +463,7 @@
         }
         
         // Single pixel flicker
-        if (Math.random() < 0.005 * intensity) {
+        if (Math.random() < 0.003 * intensity) {
             for (var i = 0; i < 20; i++) {
                 ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.3})`;
                 ctx.fillRect(Math.floor(Math.random() * w), Math.floor(Math.random() * h), 1, 1);
@@ -471,7 +471,7 @@
         }
         
         // Horizontal tear (rare)
-        if (Math.random() < 0.002 * intensity) {
+        if (Math.random() < 0.0013 * intensity) {
             const tearY = Math.floor(Math.random() * h);
             const tearHeight = 2;
             const tearWidth = w * 0.3;
@@ -481,7 +481,7 @@
         
         // 3. VIGNETTE PULSE (subtle darkening at edges)
         if (intensity > 0.3) {
-            const vignetteStrength = intensity * 0.25;
+            const vignetteStrength = intensity * 0.16;
             const gradient = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
             gradient.addColorStop(0, 'rgba(0,0,0,0)');
             gradient.addColorStop(0.6, `rgba(0,0,0,${vignetteStrength * 0.2})`);
@@ -498,7 +498,7 @@
         
         // 5. COLOR WASH (subtle overlay based on intensity)
         const hue = (now * 0.02 + intensity * 360) % 360;
-        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${intensity * 0.05})`;
+        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${intensity * 0.032})`;
         ctx.fillRect(0, 0, w, h);
     }
     
