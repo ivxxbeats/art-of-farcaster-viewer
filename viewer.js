@@ -1,7 +1,6 @@
 ﻿// ============================================================
-// ART OF FARCASTER - VIEWER SCRIPT
-// Matches sketch.js art engine + Awakened Engine
-// No text decorations - pure art
+// ART OF FARCASTER - ANIMATED VIEWER
+// Full animation + Live Intensity + Awakened Engine
 // ============================================================
 
 (function() {
@@ -22,10 +21,11 @@
     };
     
     // ============================================================
-    // AWAKENED ENGINE - Live Intensity
+    // LIVE INTENSITY API
     // ============================================================
     let liveIntensity = 0.5;
     let awakenedLevel = "base";
+    let animationTime = 0;
     
     function fetchIntensity() {
         var url = "https://raw.githubusercontent.com/ivxxbeats/farcaster-intensity/main/intensity.json";
@@ -36,14 +36,13 @@
                 if (liveIntensity > 0.8) awakenedLevel = "ascended";
                 else if (liveIntensity > 0.55) awakenedLevel = "awakened";
                 else awakenedLevel = "base";
-                console.log("Intensity:", liveIntensity, "Level:", awakenedLevel);
-                if (typeof drawArt === "function") drawArt();
+                console.log("💪 Intensity:", liveIntensity, "| Level:", awakenedLevel);
             })
             .catch(function(e) { console.log("Intensity fetch failed"); });
     }
     
     // ============================================================
-    // DETERMINISTIC HELPERS (matching sketch.js)
+    // DETERMINISTIC HELPERS
     // ============================================================
     function getSeed(tokenId, txHash) {
         let hash = 2166136261;
@@ -76,7 +75,33 @@
     }
     
     // ============================================================
-    // FRACTAL ENGINES (matching sketch.js)
+    // ANIMATION VALUES
+    // ============================================================
+    let animatedPulse = 0.7;
+    let animatedHueShift = 0;
+    let animatedGlitchX = 0;
+    let animatedGlitchY = 0;
+    let animatedWavePhase = 0;
+    
+    function updateAnimation(now) {
+        const speed = awakenedLevel === "ascended" ? 1.5 : (awakenedLevel === "awakened" ? 1.2 : 1.0);
+        
+        // Pulse brightness
+        animatedPulse = 0.5 + Math.sin(now * 0.003 * speed) * 0.4;
+        
+        // Hue drift
+        animatedHueShift = Math.sin(now * 0.0008 * speed) * 360 * 0.3;
+        
+        // Glitch offset
+        animatedGlitchX = Math.sin(now * 0.015) * 5;
+        animatedGlitchY = Math.cos(now * 0.012) * 4;
+        
+        // Wave phase
+        animatedWavePhase = (animatedWavePhase + 0.03 * speed) % (Math.PI * 2);
+    }
+    
+    // ============================================================
+    // FRACTAL ENGINES
     // ============================================================
     function novaFractalCalc(x0, y0, maxIter) {
         let x = x0, y = y0;
@@ -101,7 +126,7 @@
         return smooth < 0.02 ? 0.02 : smooth > 0.98 ? 0.98 : smooth;
     }
     
-    function getDepthFractalValue(x, y, maxIter, phase, progression) {
+    function getDepthFractalValue(x, y, maxIter) {
         let depth = 0;
         for (let i = 0; i < 3; i++) {
             const scale = 1 + i * 0.15;
@@ -110,7 +135,7 @@
         return depth / 3;
     }
     
-    function getPatternValue(x, y, time, progression) {
+    function getPatternValue(x, y, time) {
         const r = Math.sqrt(x * x + y * y);
         const a = Math.atan2(y, x);
         let val = Math.sin(a * 5 - r * 18 + time) * 0.35;
@@ -149,14 +174,14 @@
     
     function getRichColor(t, colorMood, time, intensity) {
         let r, g, b;
-        // Apply awakened color boost
-        const colorBoost = awakenedLevel === "ascended" ? 1.3 : (awakenedLevel === "awakened" ? 1.15 : 1.0);
+        const hueShift = animatedHueShift * 0.017;
+        const pulse = animatedPulse;
         
         switch(colorMood) {
             case "Rainbow":
-                r = Math.sin(t * 20 + time) * 0.8 + 0.8;
-                g = Math.sin(t * 20 + 2.094 + time * 1.2) * 0.8 + 0.8;
-                b = Math.sin(t * 20 + 4.188 + time * 0.8) * 0.8 + 0.8;
+                r = Math.sin(t * 20 + time + hueShift) * 0.8 + 0.8;
+                g = Math.sin(t * 20 + 2.094 + time * 1.2 + hueShift) * 0.8 + 0.8;
+                b = Math.sin(t * 20 + 4.188 + time * 0.8 + hueShift) * 0.8 + 0.8;
                 break;
             case "Fire":
                 r = 1.0;
@@ -181,33 +206,40 @@
                 break;
         }
         
-        r = Math.min(0.95, Math.max(0.05, r * colorBoost));
-        g = Math.min(0.95, Math.max(0.05, g * colorBoost));
-        b = Math.min(0.95, Math.max(0.05, b * colorBoost));
+        // Apply pulse
+        r = Math.min(0.95, Math.max(0.05, r * pulse));
+        g = Math.min(0.95, Math.max(0.05, g * pulse));
+        b = Math.min(0.95, Math.max(0.05, b * pulse));
         
-        return { r, g, b };
+        // Apply intensity boost
+        const boost = awakenedLevel === "ascended" ? 1.3 : (awakenedLevel === "awakened" ? 1.15 : 1.0);
+        
+        return { 
+            r: Math.min(0.95, r * boost), 
+            g: Math.min(0.95, g * boost), 
+            b: Math.min(0.95, b * boost) 
+        };
     }
     
     // ============================================================
-    // AWAKENED VISUAL EFFECTS (no text)
+    // AWAKENED VISUAL EFFECTS
     // ============================================================
-    function applyAwakenedEffects(ctx, w, h, level, intensity) {
+    function applyAwakenedEffects(ctx, w, h, level, intensity, now) {
         if (level === "ascended") {
             // Glow effect
             ctx.shadowBlur = 20;
             ctx.shadowColor = "rgba(255,100,255,0.5)";
             
-            // Energy rings
-            ctx.shadowBlur = 0;
+            // Pulsing energy rings
             for (var i = 0; i < 3; i++) {
                 ctx.beginPath();
-                ctx.arc(w/2, h/2, 100 + i * 40 + Math.sin(Date.now() * 0.003) * 10, 0, Math.PI * 2);
-                ctx.strokeStyle = `hsla(${Date.now() * 0.05 % 360}, 100%, 60%, 0.3)`;
+                ctx.arc(w/2, h/2, 100 + i * 40 + Math.sin(now * 0.003) * 10, 0, Math.PI * 2);
+                ctx.strokeStyle = `hsla(${now * 0.05 % 360}, 100%, 60%, 0.3)`;
                 ctx.lineWidth = 2;
                 ctx.stroke();
             }
             
-            // Particles
+            // Floating particles
             for (var i = 0; i < 60; i++) {
                 ctx.fillStyle = `rgba(255,100,255,${Math.random() * 0.3})`;
                 ctx.fillRect(Math.random() * w, Math.random() * h, 3, 3);
@@ -225,7 +257,7 @@
     }
     
     // ============================================================
-    // RENDER ENGINE
+    // RENDER ENGINE (Animated)
     // ============================================================
     let canvas, ctx;
     let offscreen, offCtx;
@@ -234,10 +266,9 @@
     let masterSeed = null;
     let baseTraits = null;
     let deterministicPhase = 0;
-    let deterministicIntensity = 0.5;
     let canonicalTimeValue = 0;
-    let animationId = null;
     let tokenId = null;
+    let startTime = null;
     
     function updateOffscreen() {
         const newW = 420;
@@ -252,7 +283,6 @@
         h = offscreen.height;
     }
     
-    // Generate traits from seed (simplified for viewer)
     function generateTraits(seed, tokenId) {
         const traits = {};
         const rarityRand = deterministicRandom(seed, 0);
@@ -274,9 +304,8 @@
     }
     
     function generateBaseParams(seed, tokenId) {
-        const tokenNum = parseInt(tokenId) || 1;
         const rng = function() {
-            let state = (seed + tokenNum) >>> 0;
+            let state = (seed + parseInt(tokenId)) >>> 0;
             state ^= state << 13;
             state ^= state >>> 17;
             state ^= state << 5;
@@ -290,18 +319,18 @@
         };
     }
     
-    function drawArt() {
+    function renderFrame(now) {
         if (!currentTraits || !ctx) return;
         
         try {
+            updateAnimation(now);
             updateOffscreen();
+            
             const imgData = offCtx.createImageData(w, h);
             const data = imgData.data;
             const isGrail = (currentTraits["Rarity Class"] === RARITY_CLASSES.GRAIL);
             const intensity = liveIntensity;
-            const progression = isGrail ? (intensity > 0.65 ? "ascended" : (intensity > 0.45 ? "awakened" : "dormant")) : 
-                                          (intensity > 0.82 ? "ascended" : (intensity > 0.55 ? "awakened" : "base"));
-            const time = canonicalTimeValue;
+            const time = canonicalTimeValue + now * 0.002;
             const zoom = baseTraits?.zoom || 1.0;
             const offsetX = baseTraits?.offsetX || 0;
             const offsetY = baseTraits?.offsetY || 0;
@@ -309,16 +338,20 @@
             
             for (let y = 0; y < h; y++) {
                 for (let x = 0; x < w; x++) {
-                    let ux = (x / w) * 4.0 - 2.5;
-                    let uy = (y / h) * 4.0 - 2.0;
+                    // Apply glitch offset
+                    let offsetXpx = animatedGlitchX * (Math.random() - 0.5);
+                    let offsetYpx = animatedGlitchY * (Math.random() - 0.5);
+                    
+                    let ux = ((x + offsetXpx) / w) * 4.0 - 2.5;
+                    let uy = ((y + offsetYpx) / h) * 4.0 - 2.0;
                     ux *= w / h;
                     
                     let transformed = applyCompositionTransform(ux, uy, currentTraits.Composition, zoom, offsetX, offsetY);
                     let rx = transformed.x;
                     let ry = transformed.y;
                     
-                    let fractalVal = getDepthFractalValue(rx, ry, maxIter, deterministicPhase, progression);
-                    let patternVal = getPatternValue(rx, ry, time, progression);
+                    let fractalVal = getDepthFractalValue(rx, ry, maxIter);
+                    let patternVal = getPatternValue(rx, ry, time);
                     
                     let t = (fractalVal + patternVal) * 0.5;
                     t = Math.max(0.03, Math.min(0.97, t));
@@ -337,13 +370,13 @@
             ctx.clearRect(0, 0, 700, 700);
             ctx.drawImage(offscreen, 0, 0, w, h, 0, 0, 700, 700);
             
-            // Apply Awakened visual effects (no text)
-            applyAwakenedEffects(ctx, 700, 700, awakenedLevel, liveIntensity);
+            // Apply Awakened visual effects
+            applyAwakenedEffects(ctx, 700, 700, awakenedLevel, liveIntensity, now);
             
-            // Grail particles (subtle, no text)
+            // Grail particles
             if (isGrail) {
-                for (var i = 0; i < 40; i++) {
-                    ctx.fillStyle = `hsla(${Date.now() * 0.05 % 360}, 100%, 60%, 0.2)`;
+                for (var i = 0; i < 50; i++) {
+                    ctx.fillStyle = `hsla(${now * 0.05 % 360}, 100%, 60%, 0.25)`;
                     ctx.fillRect(Math.random() * 700, Math.random() * 700, 4, 4);
                 }
             }
@@ -353,8 +386,10 @@
         }
     }
     
-    function animate() {
-        drawArt();
+    function animate(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+        renderFrame(elapsed);
         requestAnimationFrame(animate);
     }
     
@@ -373,31 +408,26 @@
         tokenId = params.get('tokenId') || params.get('tid') || '1';
         const txHash = params.get('txHash') || params.get('h') || '0x0';
         
-        console.log("Token:", tokenId);
+        console.log("🎨 Token:", tokenId);
         
         masterSeed = getSeed(tokenId, txHash);
         currentTraits = generateTraits(masterSeed, tokenId);
         baseTraits = generateBaseParams(masterSeed, tokenId);
         
         const intensityRand = deterministicRandom(masterSeed, 10);
-        deterministicIntensity = 0.2 + intensityRand * 0.7;
+        const deterministicIntensity = 0.2 + intensityRand * 0.7;
         deterministicPhase = getDeterministicPhase(masterSeed, deterministicIntensity);
         canonicalTimeValue = deterministicTime(tokenId, masterSeed, deterministicIntensity);
         
-        // Initial draw
-        drawArt();
-        
-        // Fetch intensity and redraw
+        // Start fetching intensity
         fetchIntensity();
-        setInterval(function() {
-            fetchIntensity();
-            drawArt();
-        }, 30000);
+        setInterval(fetchIntensity, 30000);
         
-        // Continuous animation
-        animate();
+        // Start animation
+        startTime = null;
+        requestAnimationFrame(animate);
         
-        console.log("✅ Viewer ready - Token:", tokenId);
+        console.log("✅ Animated viewer ready - Token:", tokenId);
     }
     
     if (document.readyState === 'loading') {
