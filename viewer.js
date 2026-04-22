@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // ART OF FARCASTER - VIEWER v23.0
 // EXACT pipeline match with sketch.js
 // Only animation added AFTER field computation
@@ -410,7 +410,7 @@
     function updateComplementaryUI(complementary) {
         const infoEl = document.getElementById('complementaryInfo');
         if (infoEl) {
-            infoEl.innerHTML = `${complementary.engineType} · ${complementary.mood} · ${complementary.element} · Driver: ${complementary.primaryDriver}`;
+            infoEl.innerHTML = `${complementary.engineType} Â· ${complementary.mood} Â· ${complementary.element} Â· Driver: ${complementary.primaryDriver}`;
         }
     }
     
@@ -420,6 +420,8 @@
     let frameCount = 0;
     
     function applyIntensityEffects(ctx, w, h, intensity, now) {
+        // Only apply every 3rd frame for performance
+        if (Math.random() > 0.33) return;
         frameCount++;
         if (frameCount % 4 !== 0) return;
         
@@ -491,7 +493,8 @@
         
         // Gentle animation applied AFTER field computation
         timeOffset = now;
-        animatedPulse = 0.96 + Math.sin(now * 0.0005) * 0.02;
+        // Gentle pulse for final output
+        let animatedPulse = 0.94 + Math.sin(now * 0.0008) * 0.04;
         
         try {
             updateOffscreen();
@@ -658,6 +661,7 @@
             ctx.clearRect(0, 0, 700, 700);
             ctx.drawImage(offscreen, 0, 0, w, h, 0, 0, 700, 700);
             
+            // Apply intensity-based effects (dust, glitch, vignette)
             applyIntensityEffects(ctx, 700, 700, liveIntensity, now);
             
         } catch(e) {
@@ -686,6 +690,7 @@
         const params = new URLSearchParams(window.location.search);
         tokenId = params.get('tokenId') || params.get('tid') || '1';
         const txHash = params.get('txHash') || params.get('h') || '0x0';
+        console.log('Viewer using txHash:', txHash);
         
         console.log("Token:", tokenId);
         
