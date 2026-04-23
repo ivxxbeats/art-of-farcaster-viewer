@@ -2,215 +2,88 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>dartHLGEN Intensity API - Live Awakening Data</title>
+    <title>Dart HLGEN Viewer</title>
     <style>
         body {
-            background: #0a0a0a;
-            font-family: monospace;
+            background: #000;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            padding: 20px;
         }
-        .container {
-            background: #1a1a2e;
-            border-radius: 12px;
-            padding: 30px;
-            text-align: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        }
-        h1 {
-            color: #e94560;
-            margin-bottom: 10px;
-        }
-        .intensity-value {
-            font-size: 48px;
-            font-weight: bold;
-            margin: 20px 0;
-            padding: 20px;
+        canvas {
+            width: 100%;
+            max-width: 700px;
+            aspect-ratio: 1 / 1;
             border-radius: 8px;
-        }
-        .awakening-base { color: #00ff00; }
-        .awakening-awakened { color: #00ffff; text-shadow: 0 0 10px #00ffff; }
-        .awakening-ascended { color: #ff00ff; text-shadow: 0 0 10px #ff00ff; }
-        .controls {
-            margin: 20px 0;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        button {
-            background: #0f3460;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-family: monospace;
-        }
-        button:hover {
-            background: #e94560;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
         }
         .info {
-            color: #888;
-            font-size: 12px;
-            margin-top: 20px;
-        }
-        .url-display {
-            background: #0a0a1a;
-            padding: 10px;
-            border-radius: 6px;
-            font-size: 11px;
-            word-break: break-all;
-            margin-top: 20px;
-        }
-        pre {
-            background: #0a0a1a;
-            padding: 10px;
-            border-radius: 6px;
-            text-align: left;
-            overflow-x: auto;
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            color: rgba(255,255,255,0.3);
+            font-family: monospace;
+            font-size: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎯 dartHLGEN Intensity API</h1>
-        <p>Live awakening data for the dartHLGEN Engine</p>
-        
-        <div class="intensity-value" id="intensityDisplay">0.00</div>
-        <div id="awakeningLabel" style="font-size: 14px;">Awakening: <span id="awakeningLevel">-</span></div>
-        
-        <div class="controls">
-            <button id="forceBase">🌙 Force Base (0.3)</button>
-            <button id="forceAwakened">✨ Force Awakened (0.7)</button>
-            <button id="forceAscended">⚡ Force Ascended (0.9)</button>
-            <button id="resetBtn">🔄 Reset to Auto</button>
-            <button id="copyUrlBtn">📋 Copy Current URL</button>
-        </div>
-        
-        <div class="info">
-            <p>Current intensity determines awakening state:</p>
-            <p>🌙 Base: &lt; 0.55 | ✨ Awakened: 0.55-0.82 | ⚡ Ascended: &gt; 0.82</p>
-        </div>
-        
-        <div class="url-display">
-            <strong>🔗 Use these URLs to force states:</strong>
-            <pre id="urlExamples"></pre>
-        </div>
-        
-        <div class="info">
-            <small>Intensity updates automatically every 15 seconds from GitHub Actions</small>
-        </div>
-    </div>
-
+    <canvas id="artCanvas" width="700" height="700"></canvas>
+    <div class="info" id="tokenInfo">Loading...</div>
+    
+    <!-- Load engine from darthlgen-engine repository -->
+    <script src="https://raw.githubusercontent.com/ivxxbeats/darthlgen-engine/main/sketch.js"></script>
+    
     <script>
-        let currentIntensity = 0.5;
-        let forcedIntensity = null;
+        // Simple viewer that uses the engine
+        const canvas = document.getElementById('artCanvas');
+        const ctx = canvas.getContext('2d');
         
-        function getAwakeningLevel(intensity) {
-            if (intensity > 0.82) return "ascended";
-            if (intensity > 0.55) return "awakened";
-            return "base";
+        // Get token data from URL
+        const params = new URLSearchParams(window.location.search);
+        const tokenId = params.get('tokenId') || '1';
+        const txHash = params.get('txHash') || '0xabc123';
+        const forceGrail = params.get('forceGrail') === 'true';
+        
+        // Build custom mint data
+        let customMintData = null;
+        if (forceGrail) {
+            customMintData = JSON.stringify({ forceGrail: true, intensity: 0.8 });
         }
         
-        function updateDisplay() {
-            const intensity = forcedIntensity !== null ? forcedIntensity : currentIntensity;
-            const level = getAwakeningLevel(intensity);
+        // Render using the engine
+        if (typeof renderCanonicalFrame === 'function') {
+            const result = renderCanonicalFrame({
+                tokenId: parseInt(tokenId),
+                txHash: txHash,
+                width: 320,
+                height: 320,
+                customMintData: customMintData,
+                debugOptions: null
+            });
             
-            const displayEl = document.getElementById('intensityDisplay');
-            displayEl.textContent = intensity.toFixed(3);
-            displayEl.className = `intensity-value awakening-${level}`;
-            
-            const levelEl = document.getElementById('awakeningLevel');
-            levelEl.textContent = level.toUpperCase();
-            levelEl.className = `awakening-${level}`;
-        }
-        
-        async function fetchIntensity() {
-            if (forcedIntensity !== null) return;
-            
-            try {
-                const response = await fetch('intensity.json?t=' + Date.now());
-                const data = await response.json();
-                currentIntensity = data.intensity || 0.5;
-                updateDisplay();
-            } catch(e) {
-                console.warn('Failed to fetch intensity:', e);
-            }
-        }
-        
-        function forceIntensity(value) {
-            forcedIntensity = value;
-            updateDisplay();
-            
-            // Update URL with parameter
-            const url = new URL(window.location.href);
-            url.searchParams.set('intensity', value);
-            window.history.pushState({}, '', url);
-        }
-        
-        function resetToAuto() {
-            forcedIntensity = null;
-            // Remove intensity parameter from URL
-            const url = new URL(window.location.href);
-            url.searchParams.delete('intensity');
-            window.history.pushState({}, '', url);
-            fetchIntensity();
-        }
-        
-        function copyCurrentUrl() {
-            navigator.clipboard.writeText(window.location.href);
-            alert('URL copied to clipboard!');
-        }
-        
-        function updateUrlExamples() {
-            const baseUrl = window.location.origin + window.location.pathname;
-            const examples = [
-                `${baseUrl}?intensity=0.3`,
-                `${baseUrl}?intensity=0.7`,
-                `${baseUrl}?intensity=0.9`,
-                `${baseUrl}?intensity=0.5&tokenId=123`  // Can also pass tokenId to viewer
-            ];
-            document.getElementById('urlExamples').textContent = examples.join('\n');
-        }
-        
-        // Check URL for intensity parameter on load
-        function checkUrlParams() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const intensityParam = urlParams.get('intensity');
-            
-            if (intensityParam !== null) {
-                const val = parseFloat(intensityParam);
-                if (!isNaN(val) && val >= 0 && val <= 1) {
-                    forcedIntensity = val;
-                    updateDisplay();
+            // Draw pixels to canvas
+            const imgData = ctx.createImageData(700, 700);
+            for (let y = 0; y < 700; y++) {
+                for (let x = 0; x < 700; x++) {
+                    const srcX = Math.floor(x * 320 / 700);
+                    const srcY = Math.floor(y * 320 / 700);
+                    const srcIdx = (srcY * 320 + srcX) * 4;
+                    const dstIdx = (y * 700 + x) * 4;
+                    imgData.data[dstIdx] = result.pixels[srcIdx];
+                    imgData.data[dstIdx + 1] = result.pixels[srcIdx + 1];
+                    imgData.data[dstIdx + 2] = result.pixels[srcIdx + 2];
+                    imgData.data[dstIdx + 3] = 255;
                 }
             }
+            ctx.putImageData(imgData, 0, 0);
+            
+            document.getElementById('tokenInfo').innerHTML = `Token #${tokenId} | ${result.traits.engineType} | ${result.traits.rarityClass}`;
+        } else {
+            document.getElementById('tokenInfo').innerHTML = 'Error: Engine not loaded';
         }
-        
-        // Initialize
-        document.getElementById('forceBase').onclick = () => forceIntensity(0.3);
-        document.getElementById('forceAwakened').onclick = () => forceIntensity(0.7);
-        document.getElementById('forceAscended').onclick = () => forceIntensity(0.9);
-        document.getElementById('resetBtn').onclick = resetToAuto;
-        document.getElementById('copyUrlBtn').onclick = copyCurrentUrl;
-        
-        // Check URL params first
-        checkUrlParams();
-        
-        // Start fetching if not forced
-        if (forcedIntensity === null) {
-            fetchIntensity();
-            setInterval(fetchIntensity, 15000);
-        }
-        
-        updateUrlExamples();
-        
-        console.log('🎯 dartHLGEN Intensity API ready - Force Grail via URL parameters');
     </script>
 </body>
 </html>
