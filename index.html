@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Art of Farcaster Viewer</title>
+    <title>Art of Farcaster - v28.5 Test Environment</title>
     <style>
         * {
             margin: 0;
@@ -12,57 +12,671 @@
         }
         
         body {
-            background: #000000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            background: #0a0a0a;
+            font-family: monospace;
+            padding: 20px;
             min-height: 100vh;
-            overflow: hidden;
         }
         
-        .container {
+        h1 {
+            text-align: center;
+            color: #e94560;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        
+        h1 small {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .comparison-container {
             display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
             justify-content: center;
-            align-items: center;
-            width: 100%;
-            height: 100vh;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .panel {
+            flex: 1;
+            min-width: 500px;
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        .panel h2 {
+            color: #e94560;
+            margin-bottom: 15px;
+            font-size: 18px;
+            text-align: center;
+        }
+        
+        .mint-panel h2 {
+            border-bottom: 2px solid #ff6600;
+            padding-bottom: 8px;
+        }
+        
+        .viewer-panel h2 {
+            border-bottom: 2px solid #00ff66;
+            padding-bottom: 8px;
         }
         
         canvas {
             width: 100%;
+            max-width: 450px;
             height: auto;
-            max-width: 700px;
             aspect-ratio: 1 / 1;
             display: block;
-            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+            margin: 0 auto;
             border-radius: 8px;
+            background: #111;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        button, input {
+            background: #0f3460;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-family: monospace;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background: #e94560;
+            transform: scale(1.02);
+        }
+        
+        input {
+            cursor: text;
+            width: 120px;
+        }
+        
+        .info-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background: #0f3460;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .info-label {
+            color: #888;
+        }
+        
+        .info-value {
+            color: #00ff00;
+            font-weight: bold;
+        }
+        
+        .awakening-ascended {
+            color: #ff00ff;
+            text-shadow: 0 0 5px #ff00ff;
+        }
+        
+        .awakening-awakened {
+            color: #00ffff;
+            text-shadow: 0 0 5px #00ffff;
+        }
+        
+        .event-score {
+            color: #ffaa00;
+            font-weight: bold;
+        }
+        
+        .traits {
+            margin-top: 15px;
+            padding: 10px;
+            background: #0a0a1a;
+            border-radius: 6px;
+            font-size: 10px;
+            max-height: 300px;
+            overflow: auto;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        
+        .test-console {
+            margin-top: 20px;
+            padding: 15px;
+            background: #0a0a1a;
+            border: 1px solid #e94560;
+            border-radius: 8px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .test-console h4 {
+            color: #e94560;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .test-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .test-btn {
+            background: #2a2a4e;
+            padding: 6px 12px;
+            font-size: 11px;
+        }
+        
+        .force-grail {
+            background: #6a0dad;
+        }
+        
+        .force-grail:hover {
+            background: #8b00ff;
+        }
+        
+        .awakening-btn {
+            background: #4a0e4e;
+        }
+        
+        .status {
+            margin-top: 10px;
+            padding: 8px;
+            background: #0a0a1a;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #00ff00;
+            text-align: center;
+        }
+        
+        .viewer-frame {
+            width: 100%;
+            max-width: 450px;
+            height: 450px;
+            border: none;
+            border-radius: 8px;
+            background: #000;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        hr {
+            border-color: #333;
+            margin: 10px 0;
+        }
+        
+        .footer-note {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 10px;
+            color: #666;
         }
         
         @keyframes glow {
-            0% { filter: drop-shadow(0 0 5px rgba(255,255,255,0.1)); }
-            100% { filter: drop-shadow(0 0 20px rgba(255,255,255,0.2)); }
+            0% { box-shadow: 0 0 5px rgba(233,69,96,0.2); }
+            100% { box-shadow: 0 0 20px rgba(233,69,96,0.5); }
         }
         
-        canvas {
-            animation: glow 2s ease-in-out infinite alternate;
-        }
-        
-        .info {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            color: rgba(255,255,255,0.3);
-            font-family: monospace;
-            font-size: 10px;
-            z-index: 100;
+        .panel {
+            animation: glow 3s ease-in-out infinite alternate;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <canvas id="artCanvas" width="700" height="700"></canvas>
+    <h1>🎨 Art of Farcaster — v28.5 Test Environment <small>Event Score Driven | Zone Override | Quantization Fracture</small></h1>
+    
+    <div class="comparison-container">
+        <div class="panel mint-panel">
+            <h2>📦 MINT PREVIEW (Deterministic Canonical)</h2>
+            <canvas id="artCanvas" width="450" height="450"></canvas>
+            <div class="controls">
+                <input type="text" id="tokenId" placeholder="Token ID" value="123">
+                <input type="text" id="txHash" placeholder="TX Hash" value="0xabc123def456">
+                <input type="text" id="intensityVal" placeholder="Intensity" value="0.5">
+                <button id="mintBtn">🎲 Mint / Refresh</button>
+                <button id="randomBtn">🎲 Random</button>
+            </div>
+            <div class="info-panel">
+                <div class="info-row"><span class="info-label">Token ID:</span><span class="info-value" id="currentToken">-</span></div>
+                <div class="info-row"><span class="info-label">TX Hash:</span><span class="info-value" id="currentTxHash" style="font-size: 10px;">-</span></div>
+                <div class="info-row"><span class="info-label">Mint Intensity:</span><span class="info-value" id="mintIntensity">-</span></div>
+                <div class="info-row"><span class="info-label">Awakening Level:</span><span class="info-value" id="mintState">-</span></div>
+                <div class="info-row"><span class="info-label">Engine Type:</span><span class="info-value" id="mintEngine">-</span></div>
+                <div class="info-row"><span class="info-label">Rarity Class:</span><span class="info-value" id="mintRarity">-</span></div>
+                <div class="info-row"><span class="info-label">Event Score:</span><span class="info-value event-score" id="mintEventScore">-</span></div>
+                <div class="info-row"><span class="info-label">Dominant Zone:</span><span class="info-value" id="mintZone">-</span></div>
+                <div class="info-row"><span class="info-label">Failure Mode:</span><span class="info-value" id="mintFailure">-</span></div>
+                <div class="info-row"><span class="info-label">Anomaly:</span><span class="info-value" id="mintAnomaly">-</span></div>
+                <div class="info-row"><span class="info-label">Pixel Hash:</span><span class="info-value" id="pixelHash" style="font-size: 10px;">-</span></div>
+            </div>
+            <div class="traits" id="traitsDisplay">Waiting for mint...</div>
+            <div class="status" id="mintStatus">Ready</div>
+        </div>
+        
+        <div class="panel viewer-panel">
+            <h2>✨ LIVE VIEWER (Engine-Aware Pressure Effects)</h2>
+            <iframe id="viewerFrame" class="viewer-frame" src="about:blank"></iframe>
+            <div class="info-panel">
+                <div class="info-row"><span class="info-label">Live Intensity:</span><span class="info-value" id="liveIntensity">-</span></div>
+                <div class="info-row"><span class="info-label">Awakening Level:</span><span class="info-value" id="awakeningLevel">-</span></div>
+                <div class="info-row"><span class="info-label">Viewer Mode:</span><span class="info-value" id="viewerMode">CANONICAL + PRESSURE</span></div>
+            </div>
+            <div class="status" id="viewerStatus">Waiting for viewer...</div>
+        </div>
     </div>
-    <div class="info" id="tokenInfo">Loading...</div>
-    <script src="viewer.js"></script>
+    
+    <div class="test-console">
+        <h4>🧪 TEST CONSOLE — v28.5 Force Overrides</h4>
+        <div class="test-buttons">
+            <button id="forceDormant" class="test-btn awakening-btn">🌙 Force Dormant (0.3)</button>
+            <button id="forceAwakened" class="test-btn awakening-btn">✨ Force Awakened (0.7)</button>
+            <button id="forceAscended" class="test-btn awakening-btn">⚡ Force Ascended (0.9)</button>
+            <button id="forceGrailBtn" class="test-btn force-grail">🏆 Force Grail</button>
+            <button id="forceRuptureBtn" class="test-btn">💥 Force Rupture Engine</button>
+            <button id="forceEchoBtn" class="test-btn">🌊 Force Echo Engine</button>
+            <button id="forceCanonicalBtn" class="test-btn">🔷 Force Canonical Engine</button>
+            <button id="forceFractureBtn" class="test-btn">🔪 Force Fracture Failure</button>
+            <button id="forceSpectralBtn" class="test-btn">🌈 Force SpectralSplit Anomaly</button>
+            <button id="clearForcesBtn" class="test-btn">🗑️ Clear All Forces</button>
+            <button id="checkDeterminismBtn" class="test-btn" style="background:#6a0dad;">🔍 Check Determinism (3x)</button>
+            <button id="freezeFrameBtn" class="test-btn" style="background:#0a4a6a;">❄️ Freeze Frame</button>
+        </div>
+        <div class="status" id="testStatus" style="margin-top: 10px;">Ready - v28.5 Engine Active</div>
+        <hr>
+        <div style="font-size: 10px; color: #666; margin-top: 8px; text-align: center;">
+            ⚡ Event Score drives visual dominance | 🎯 Zone overrides composition | 💥 Rupture quantization fracture | 🌊 Echo memory distortion | 🔷 Canonical stress under pressure
+        </div>
+    </div>
+    <div class="footer-note">
+        Art of Farcaster — Deterministic Generative Art on Farcaster
+    </div>
+
+    <script>
+        // ============================================================
+        // v28.5 TEST ENVIRONMENT
+        // ============================================================
+        
+        let currentMockHL = null;
+        let currentScript = null;
+        let activeForces = { intensity: null, grail: false, engine: null, failure: null, anomaly: null };
+        let determinismTestCount = 0;
+        let determinismResults = [];
+        let currentPixelHash = null;
+        
+        class MockHL {
+            constructor(tokenId, txHash, intensity) {
+                let finalIntensity = intensity;
+                if (activeForces.intensity !== null) {
+                    finalIntensity = activeForces.intensity;
+                }
+                
+                let customData = { 
+                    intensity: parseFloat(finalIntensity),
+                    forceGrail: activeForces.grail,
+                    forceEngine: activeForces.engine,
+                    forceFailure: activeForces.failure,
+                    forceAnomaly: activeForces.anomaly
+                };
+                
+                this.tx = {
+                    tokenId: tokenId,
+                    hash: txHash,
+                    customMintData: JSON.stringify(customData)
+                };
+                
+                this.seed = this.hashString(txHash + '_' + tokenId);
+                this.state = this.seed;
+                this.randomCalls = 0;
+            }
+            
+            hashString(str) {
+                let hash = 2166136261;
+                for (let i = 0; i < str.length; i++) {
+                    hash ^= str.charCodeAt(i);
+                    hash = (hash * 16777619) >>> 0;
+                }
+                return hash >>> 0;
+            }
+            
+            random() {
+                this.randomCalls++;
+                this.state ^= this.state << 13;
+                this.state ^= this.state >>> 17;
+                this.state ^= this.state << 5;
+                this.state = (this.state ^ (this.state >>> 11)) >>> 0;
+                return this.state / 0xffffffff;
+            }
+            
+            randomInt(min, max) {
+                return Math.floor(this.random() * (max - min + 1)) + min;
+            }
+            
+            token = {
+                setTraits: (traits) => {
+                    document.getElementById('traitsDisplay').innerHTML = JSON.stringify(traits, null, 2);
+                    document.getElementById('mintIntensity').innerHTML = traits["Intensity"] || "-";
+                    document.getElementById('mintState').innerHTML = traits["Awakening Level"] || "-";
+                    document.getElementById('mintEngine').innerHTML = traits["Engine Type"] || "-";
+                    document.getElementById('mintRarity').innerHTML = traits["Rarity Class"] || "-";
+                    document.getElementById('mintEventScore').innerHTML = traits["Event Score"] || "-";
+                    document.getElementById('mintZone').innerHTML = traits["Dominant Zone"] || "-";
+                    document.getElementById('mintFailure').innerHTML = traits["Failure Mode"] || "-";
+                    document.getElementById('mintAnomaly').innerHTML = traits["Anomaly Class"] || "None";
+                    
+                    let stateEl = document.getElementById('mintState');
+                    let state = traits["Awakening Level"];
+                    stateEl.className = "info-value";
+                    if (state === "Ascended") stateEl.classList.add("awakening-ascended");
+                    else if (state === "Awakened") stateEl.classList.add("awakening-awakened");
+                    
+                    let scoreEl = document.getElementById('mintEventScore');
+                    let score = parseInt(traits["Event Score"]) || 0;
+                    scoreEl.className = "info-value event-score";
+                    if (score >= 6) scoreEl.style.color = "#ff6600";
+                    else if (score >= 4) scoreEl.style.color = "#ffaa00";
+                    else scoreEl.style.color = "#00ff00";
+                    
+                    if (determinismTestCount > 0) {
+                        determinismResults.push(traits);
+                    }
+                },
+                setName: (name) => { 
+                    document.getElementById('mintStatus').innerHTML = `✅ ${name.substring(0, 60)}...`;
+                },
+                setDescription: (desc) => {},
+                capturePreview: () => {
+                    setTimeout(() => {
+                        if (document.getElementById('mintStatus').innerHTML !== "❌ Error") {
+                            document.getElementById('mintStatus').innerHTML = "Ready";
+                        }
+                        if (determinismTestCount > 0 && determinismResults.length === determinismTestCount) {
+                            finishDeterminismTest();
+                        }
+                    }, 1500);
+                }
+            };
+        }
+        
+        function finishDeterminismTest() {
+            if (determinismResults.length < 2) {
+                document.getElementById('testStatus').innerHTML = "❌ Determinism test failed - insufficient results";
+                document.getElementById('testStatus').style.color = "#ff4444";
+                determinismTestCount = 0;
+                determinismResults = [];
+                return;
+            }
+            
+            const first = determinismResults[0];
+            let allMatch = true;
+            
+            for (let i = 1; i < determinismResults.length; i++) {
+                if (JSON.stringify(first) !== JSON.stringify(determinismResults[i])) {
+                    allMatch = false;
+                    break;
+                }
+            }
+            
+            if (allMatch) {
+                document.getElementById('testStatus').innerHTML = `✅ DETERMINISTIC: ${determinismResults.length} mints produced identical traits! Event Score: ${first["Event Score"]}`;
+                document.getElementById('testStatus').style.color = "#00ff00";
+            } else {
+                document.getElementById('testStatus').innerHTML = `❌ NOT DETERMINISTIC: Traits differ between ${determinismResults.length} mints!`;
+                document.getElementById('testStatus').style.color = "#ff4444";
+            }
+            
+            determinismTestCount = 0;
+            determinismResults = [];
+        }
+        
+        function hashPixelBufferFromCanvas() {
+            const canvas = document.getElementById('artCanvas');
+            const ctx = canvas.getContext('2d');
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            
+            let hash = 2166136261;
+            const step = Math.max(1, Math.floor(data.length / 5000));
+            
+            for (let i = 0; i < data.length; i += step) {
+                hash ^= data[i];
+                hash = (hash * 16777619) >>> 0;
+                hash ^= data[i+1] || 0;
+                hash = (hash * 16777619) >>> 0;
+                hash ^= data[i+2] || 0;
+                hash = (hash * 16777619) >>> 0;
+            }
+            return (hash >>> 0).toString(16).padStart(8, '0');
+        }
+        
+        function reloadMint() {
+            const tokenId = document.getElementById('tokenId').value;
+            const txHash = document.getElementById('txHash').value;
+            let intensity = document.getElementById('intensityVal').value;
+            
+            document.getElementById('mintStatus').innerHTML = "🔄 Minting v28.5...";
+            document.getElementById('currentToken').innerHTML = tokenId;
+            document.getElementById('currentTxHash').innerHTML = txHash.substring(0, 16) + "...";
+            document.getElementById('traitsDisplay').innerHTML = "Loading v28.5 engine...";
+            document.getElementById('pixelHash').innerHTML = "...";
+            
+            const canvas = document.getElementById('artCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, 450, 450);
+            ctx.fillStyle = '#e94560';
+            ctx.font = '14px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('Rendering v28.5...', 225, 225);
+            
+            currentMockHL = new MockHL(tokenId, txHash, intensity);
+            window.hl = currentMockHL;
+            window.$hl = currentMockHL;
+            
+            if (currentScript) document.body.removeChild(currentScript);
+            
+            currentScript = document.createElement('script');
+            currentScript.src = 'sketch.js?_=' + Date.now();
+            currentScript.onload = () => {
+                document.getElementById('mintStatus').innerHTML = "✅ v28.5 mint complete!";
+                
+                setTimeout(() => {
+                    const pixelHash = hashPixelBufferFromCanvas();
+                    currentPixelHash = pixelHash;
+                    document.getElementById('pixelHash').innerHTML = pixelHash;
+                }, 500);
+                
+                const viewerUrl = `https://ivxxbeats.github.io/art-of-farcaster-viewer/?tokenId=${tokenId}&txHash=${txHash}`;
+                document.getElementById('viewerFrame').src = viewerUrl;
+                document.getElementById('viewerStatus').innerHTML = "🔄 Loading viewer...";
+                setTimeout(() => { 
+                    document.getElementById('viewerStatus').innerHTML = "✅ Viewer ready (engine-aware pressure effects)";
+                }, 2000);
+            };
+            currentScript.onerror = () => {
+                document.getElementById('mintStatus').innerHTML = "❌ Error loading sketch.js v28.5";
+                document.getElementById('traitsDisplay').innerHTML = "Error: sketch.js not found!\nMake sure v28.5 sketch.js is in the same directory.";
+            };
+            document.body.appendChild(currentScript);
+        }
+        
+        function randomToken() {
+            const newId = Math.floor(Math.random() * 10000) + 1;
+            const newHash = '0x' + Math.random().toString(36).substring(2, 15);
+            const newIntensity = (Math.random() * 0.9 + 0.05).toFixed(3);
+            document.getElementById('tokenId').value = newId;
+            document.getElementById('txHash').value = newHash;
+            document.getElementById('intensityVal').value = newIntensity;
+            reloadMint();
+        }
+        
+        function applyForce() {
+            let msg = [];
+            if (activeForces.intensity !== null) msg.push(`Intensity: ${activeForces.intensity}`);
+            if (activeForces.grail) msg.push(`GRAIL`);
+            if (activeForces.engine) msg.push(`Engine: ${activeForces.engine}`);
+            if (activeForces.failure) msg.push(`Failure: ${activeForces.failure}`);
+            if (activeForces.anomaly) msg.push(`Anomaly: ${activeForces.anomaly}`);
+            document.getElementById('testStatus').innerHTML = `🧪 Forces active: ${msg.join(' | ') || 'None'} (v28.5)`;
+            reloadMint();
+        }
+        
+        function forceAwakening(level) {
+            let intensity;
+            if (level === 'dormant') intensity = 0.3;
+            else if (level === 'awakened') intensity = 0.7;
+            else intensity = 0.9;
+            activeForces.intensity = intensity;
+            document.getElementById('intensityVal').value = intensity;
+            applyForce();
+        }
+        
+        function forceGrail() {
+            activeForces.grail = true;
+            applyForce();
+        }
+        
+        function forceEngine(engineType) {
+            activeForces.engine = engineType;
+            applyForce();
+        }
+        
+        function forceFailure(failureMode) {
+            activeForces.failure = failureMode;
+            applyForce();
+        }
+        
+        function forceAnomaly(anomalyClass) {
+            activeForces.anomaly = anomalyClass;
+            applyForce();
+        }
+        
+        function clearForces() {
+            activeForces = { intensity: null, grail: false, engine: null, failure: null, anomaly: null };
+            document.getElementById('intensityVal').value = '0.5';
+            document.getElementById('testStatus').innerHTML = "🧪 All forces cleared - returning to natural distribution";
+            reloadMint();
+            setTimeout(() => {
+                if (document.getElementById('testStatus').innerHTML.includes("cleared")) {
+                    document.getElementById('testStatus').innerHTML = "Ready - v28.5 engine active";
+                }
+            }, 2000);
+        }
+        
+        function checkDeterminism() {
+            const tokenId = document.getElementById('tokenId').value;
+            const txHash = document.getElementById('txHash').value;
+            const intensity = document.getElementById('intensityVal').value;
+            
+            determinismTestCount = 3;
+            determinismResults = [];
+            
+            document.getElementById('testStatus').innerHTML = "🔍 Running determinism test (3 mints)...";
+            document.getElementById('testStatus').style.color = "#ffaa00";
+            
+            const savedForces = { ...activeForces };
+            
+            let runCount = 0;
+            
+            function runNextMint() {
+                if (runCount >= 3) return;
+                
+                const mockHL = new MockHL(tokenId, txHash, intensity);
+                window.hl = mockHL;
+                window.$hl = mockHL;
+                
+                const script = document.createElement('script');
+                script.src = 'sketch.js?_=' + Date.now() + '_run' + runCount;
+                script.onload = () => {
+                    runCount++;
+                    if (runCount < 3) {
+                        setTimeout(runNextMint, 500);
+                    }
+                };
+                document.body.appendChild(script);
+            }
+            
+            runNextMint();
+            
+            setTimeout(() => {
+                if (determinismTestCount > 0 && determinismResults.length < 2) {
+                    document.getElementById('testStatus').innerHTML = "❌ Determinism test timeout - check console";
+                    document.getElementById('testStatus').style.color = "#ff4444";
+                    determinismTestCount = 0;
+                    determinismResults = [];
+                }
+            }, 15000);
+        }
+        
+        function freezeFrame() {
+            const tokenId = document.getElementById('tokenId').value;
+            const txHash = document.getElementById('txHash').value;
+            const viewerUrl = `https://ivxxbeats.github.io/art-of-farcaster-viewer/?tokenId=${tokenId}&txHash=${txHash}&freeze=true`;
+            document.getElementById('viewerFrame').src = viewerUrl;
+            document.getElementById('viewerStatus').innerHTML = "❄️ Freeze frame mode - exact mint comparison";
+            document.getElementById('testStatus').innerHTML = "❄️ Freeze frame active - viewer shows exact mint output";
+        }
+        
+        function pollLiveIntensity() {
+            setInterval(() => {
+                fetch('https://raw.githubusercontent.com/ivxxbeats/farcaster-intensity/main/intensity.json?t=' + Date.now())
+                    .then(r => r.json())
+                    .then(data => {
+                        document.getElementById('liveIntensity').innerHTML = data.intensity?.toFixed(3) || '-';
+                        let level = "base";
+                        if (data.intensity > 0.82) level = "ascended";
+                        else if (data.intensity > 0.58) level = "awakened";
+                        let levelEl = document.getElementById('awakeningLevel');
+                        levelEl.innerHTML = level;
+                        levelEl.className = "info-value";
+                        if (level === "ascended") levelEl.classList.add("awakening-ascended");
+                        else if (level === "awakened") levelEl.classList.add("awakening-awakened");
+                    })
+                    .catch(() => {});
+            }, 5000);
+        }
+        
+        function init() {
+            document.getElementById('mintBtn').onclick = reloadMint;
+            document.getElementById('randomBtn').onclick = randomToken;
+            document.getElementById('forceDormant').onclick = () => forceAwakening('dormant');
+            document.getElementById('forceAwakened').onclick = () => forceAwakening('awakened');
+            document.getElementById('forceAscended').onclick = () => forceAwakening('ascended');
+            document.getElementById('forceGrailBtn').onclick = () => forceGrail();
+            document.getElementById('forceRuptureBtn').onclick = () => forceEngine('Rupture');
+            document.getElementById('forceEchoBtn').onclick = () => forceEngine('Echo');
+            document.getElementById('forceCanonicalBtn').onclick = () => forceEngine('Canonical');
+            document.getElementById('forceFractureBtn').onclick = () => forceFailure('Fracture');
+            document.getElementById('forceSpectralBtn').onclick = () => forceAnomaly('SpectralSplit');
+            document.getElementById('clearForcesBtn').onclick = () => clearForces();
+            document.getElementById('checkDeterminismBtn').onclick = () => checkDeterminism();
+            document.getElementById('freezeFrameBtn').onclick = () => freezeFrame();
+            pollLiveIntensity();
+            reloadMint();
+            
+            console.log("🎨 v28.5 Test Environment Ready");
+            console.log("Features: Event Score Dominance | Zone Override | Quantization Fracture | Memory Distortion");
+        }
+        
+        init();
+    </script>
 </body>
 </html>
