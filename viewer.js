@@ -1,10 +1,19 @@
 // ============================================================
-// ART OF FARCASTER - VIEWER v26.0
-// Engine-specific frequency, contrast, color, and Grail manifestations
+// ART OF FARCASTER - VIEWER v28.2
+// Full deterministic engine + Debug Mode + Canonical Mode
 // ============================================================
 
 (function() {
     "use strict";
+    
+    // ============================================================
+    // DEBUG CONFIGURATION (must match mint script)
+    // ============================================================
+    const DEBUG_MODE = true;                    // Enable debug overrides
+    const FORCE_GRAIL_PERCENT = 80;             // 80% chance to roll Grail when DEBUG_MODE = true
+    const ONLY_MYTHIC_RARE_UNCOMMON = true;     // If true, Common is replaced by Uncommon
+    const BALANCE_NON_CANONICAL_ENGINES = true; // Echo and Rupture get equal 35% each (Canonical 30%)
+    const CANONICAL_MODE = false;               // Set true to disable live intensity & animation (match mint exactly)
     
     // ============================================================
     // SIGNATURE FUNCTIONS
@@ -28,7 +37,6 @@
     // ============================================================
     // ENGINE-SPECIFIC SHAPING FUNCTIONS
     // ============================================================
-    
     function engineFrequencyShape(t, engineName, freqMultiplier) {
         let out;
         if (engineName === "Canonical") {
@@ -49,7 +57,7 @@
         const s = signatureContrast(t);
         if (engineName === "Canonical") return Math.pow(s, 0.92);
         if (engineName === "Echo") return Math.pow(s, 1.12);
-        return Math.pow(s, 0.68); // Rupture
+        return Math.pow(s, 0.68);
     }
     
     function engineColorDiscipline(r, g, b, engineName, t, time) {
@@ -77,13 +85,16 @@
     const RARITY_CLASSES = { COMMON: "Common", UNCOMMON: "Uncommon", RARE: "Rare", MYTHIC: "Mythic", GRAIL: "Grail" };
     const ARCHETYPES = ["Signal", "Drift", "Rift", "Core", "Prism", "Void"];
     const ANCHOR_FORMS = ["Aether", "PrismHeart", "Faultline", "Gate", "Nexus", "Bloom"];
-    
     const ENGINE_TYPES = ["Canonical", "Echo", "Rupture"];
     const PRIMARY_DRIVERS = ["Fractal", "Pattern", "Color", "Composition"];
     const STRUCTURE_TYPES = ["Nova", "Lattice", "Field", "Wave", "Grid", "Drift"];
     const SPATIAL_BEHAVIORS = ["Radial", "Spiral", "FlowField", "Kaleido", "Vortex", "Asymmetrical"];
     const ANOMALY_CLASSES = ["Interference", "Collapse", "EchoLoop", "SpectralSplit"];
+    const FAILURE_MODES = ["Recovering", "Residual", "VoidBloom", "Fracture"];
     
+    // ============================================================
+    // HELPER FUNCTIONS
+    // ============================================================
     function weightedPick(items, weights, rng) {
         const r = rng();
         let sum = 0;
@@ -94,22 +105,168 @@
         return items[items.length - 1];
     }
     
-    function getEngineConfig(engineType) {
-        switch (engineType) {
-            case "Canonical": return { fractalWeight: 0.7, patternWeight: 0.3, allowedCompositions: ["Radial", "Spiral", "Kaleido"], name: "Canonical" };
-            case "Echo": return { fractalWeight: 0.35, patternWeight: 0.65, allowedCompositions: ["FlowField", "Vortex", "Asymmetrical"], name: "Echo" };
-            case "Rupture": return { fractalWeight: 0.5, patternWeight: 0.5, allowedCompositions: ["Asymmetrical", "Vortex", "Radial"], name: "Rupture" };
-            default: return { fractalWeight: 0.5, patternWeight: 0.5, allowedCompositions: ["Radial"], name: "Canonical" };
+    // ============================================================
+    // RARITY ROLL (with debug override)
+    // ============================================================
+    function rollRarityClass(rng) {
+        if (DEBUG_MODE && FORCE_GRAIL_PERCENT > 0) {
+            const r = rng();
+            if (r * 100 < FORCE_GRAIL_PERCENT) return RARITY_CLASSES.GRAIL;
+        }
+        const r = rng();
+        if (r < 0.60) return RARITY_CLASSES.COMMON;
+        if (r < 0.85) return RARITY_CLASSES.UNCOMMON;
+        if (r < 0.95) return RARITY_CLASSES.RARE;
+        if (r < 0.99) return RARITY_CLASSES.MYTHIC;
+        return RARITY_CLASSES.GRAIL;
+    }
+    
+    // ============================================================
+    // ARCHETYPE & ANCHOR FORM
+    // ============================================================
+    function rollArchetype(rarityClass, rng) {
+        if (rarityClass === RARITY_CLASSES.GRAIL) {
+            return weightedPick(ARCHETYPES, [0.12, 0.14, 0.18, 0.12, 0.28, 0.16], rng);
+        }
+        switch (rarityClass) {
+            case RARITY_CLASSES.COMMON: return weightedPick(ARCHETYPES, [0.20, 0.18, 0.15, 0.17, 0.18, 0.12], rng);
+            case RARITY_CLASSES.UNCOMMON: return weightedPick(ARCHETYPES, [0.17, 0.17, 0.17, 0.17, 0.18, 0.14], rng);
+            case RARITY_CLASSES.RARE: return weightedPick(ARCHETYPES, [0.14, 0.16, 0.20, 0.16, 0.18, 0.16], rng);
+            case RARITY_CLASSES.MYTHIC: return weightedPick(ARCHETYPES, [0.10, 0.14, 0.22, 0.14, 0.20, 0.20], rng);
+            default: return "Signal";
+        }
+    }
+    
+    function rollAnchorForm(archetype, rng) {
+        switch (archetype) {
+            case "Signal": return weightedPick(ANCHOR_FORMS, [0.10, 0.28, 0.08, 0.30, 0.18, 0.06], rng);
+            case "Drift": return weightedPick(ANCHOR_FORMS, [0.18, 0.22, 0.06, 0.08, 0.32, 0.14], rng);
+            case "Rift": return weightedPick(ANCHOR_FORMS, [0.06, 0.08, 0.46, 0.12, 0.10, 0.18], rng);
+            case "Core": return weightedPick(ANCHOR_FORMS, [0.32, 0.26, 0.06, 0.16, 0.10, 0.10], rng);
+            case "Prism": return weightedPick(ANCHOR_FORMS, [0.12, 0.30, 0.10, 0.20, 0.16, 0.12], rng);
+            case "Void": return weightedPick(ANCHOR_FORMS, [0.28, 0.16, 0.18, 0.14, 0.08, 0.16], rng);
+            default: return "Aether";
         }
     }
     
     // ============================================================
-    // LIVE INTENSITY API
+    // ENGINE TYPE ROLL (with debug balancing)
+    // ============================================================
+    function rollEngineType(rng, rarityClass) {
+        if (DEBUG_MODE && BALANCE_NON_CANONICAL_ENGINES) {
+            const r = rng();
+            if (r < 0.30) return "Canonical";
+            if (r < 0.65) return "Echo";
+            return "Rupture";
+        }
+        if (rarityClass === RARITY_CLASSES.GRAIL) {
+            return weightedPick(ENGINE_TYPES, [0.10, 0.20, 0.70], rng);
+        }
+        return weightedPick(ENGINE_TYPES, [0.78, 0.19, 0.03], rng);
+    }
+    
+    // ============================================================
+    // ENGINE CONFIGURATION
+    // ============================================================
+    function getEngineConfig(engineType) {
+        switch (engineType) {
+            case "Canonical":
+                return { fractalWeight: 0.7, patternWeight: 0.3, allowedCompositions: ["Radial", "Spiral", "Kaleido"], name: "Canonical" };
+            case "Echo":
+                return { fractalWeight: 0.35, patternWeight: 0.65, allowedCompositions: ["FlowField", "Vortex", "Asymmetrical"], name: "Echo" };
+            default:
+                return { fractalWeight: 0.5, patternWeight: 0.5, allowedCompositions: ["Asymmetrical", "Vortex", "Radial"], name: "Rupture" };
+        }
+    }
+    
+    // ============================================================
+    // PRIMARY DRIVER, STRUCTURE TYPE, COLOR MOOD
+    // ============================================================
+    function rollPrimaryDriver(rng) {
+        return weightedPick(PRIMARY_DRIVERS, [0.35, 0.25, 0.25, 0.15], rng);
+    }
+    
+    function rollStructureType(rng) {
+        return STRUCTURE_TYPES[Math.floor(rng() * STRUCTURE_TYPES.length)];
+    }
+    
+    function rollColorMood(rng) {
+        const colors = ["Ethereal", "Volcanic", "StellarDrift", "Nebula", "SolarFlare", "DeepVoid", "PrismCore", "AuroraBorealis"];
+        return colors[Math.floor(rng() * colors.length)];
+    }
+    
+    // ============================================================
+    // FAILURE MODE & ANOMALY
+    // ============================================================
+    function rollFailureMode(rng, engineType, rarityClass) {
+        if (rarityClass === "Grail") {
+            if (engineType === "Rupture") {
+                return weightedPick(FAILURE_MODES, [0.05, 0.10, 0.15, 0.70], rng);
+            }
+            if (engineType === "Echo") {
+                return weightedPick(FAILURE_MODES, [0.10, 0.45, 0.30, 0.15], rng);
+            }
+            return weightedPick(FAILURE_MODES, [0.30, 0.35, 0.25, 0.10], rng);
+        }
+        if (engineType === "Canonical") {
+            return weightedPick(FAILURE_MODES, [0.70, 0.20, 0.08, 0.02], rng);
+        }
+        if (engineType === "Echo") {
+            return weightedPick(FAILURE_MODES, [0.30, 0.45, 0.20, 0.05], rng);
+        }
+        return weightedPick(FAILURE_MODES, [0.15, 0.20, 0.15, 0.50], rng);
+    }
+    
+    function rollAnomalyClass(rng) {
+        return weightedPick(ANOMALY_CLASSES, [0.25, 0.25, 0.25, 0.25], rng);
+    }
+    
+    // ============================================================
+    // TRAIT GENERATION
+    // ============================================================
+    function generateCollectionTraits(rng, tokenNum) {
+        let rarityClass = rollRarityClass(rng);
+        if (DEBUG_MODE && ONLY_MYTHIC_RARE_UNCOMMON && rarityClass === RARITY_CLASSES.COMMON) {
+            rarityClass = RARITY_CLASSES.UNCOMMON;
+        }
+        const archetype = rollArchetype(rarityClass, rng);
+        const anchorForm = rollAnchorForm(archetype, rng);
+        const engineType = rollEngineType(rng, rarityClass);
+        const primaryDriver = rollPrimaryDriver(rng);
+        const engineConfig = getEngineConfig(engineType);
+        const spatialBehavior = engineConfig.allowedCompositions[Math.floor(rng() * engineConfig.allowedCompositions.length)];
+        const colorMood = rollColorMood(rng);
+        const structureType = rollStructureType(rng);
+        const failureMode = rollFailureMode(rng, engineType, rarityClass);
+        
+        const traits = {
+            "Rarity Class": rarityClass,
+            "Archetype": archetype,
+            "Anchor Form": anchorForm,
+            "Engine Type": engineType,
+            "Primary Driver": primaryDriver,
+            "Color Mood": colorMood,
+            "Spatial Behavior": spatialBehavior,
+            "Structure Type": structureType,
+            "Engine Config": engineConfig,
+            "Failure Mode": failureMode
+        };
+        
+        if (rarityClass === RARITY_CLASSES.GRAIL) {
+            traits["Anomaly Class"] = rollAnomalyClass(rng);
+        }
+        
+        return traits;
+    }
+    
+    // ============================================================
+    // LIVE INTENSITY API (Viewer only - skipped in CANONICAL_MODE)
     // ============================================================
     let liveIntensity = 0.5;
     let awakenedLevel = "base";
     
     function fetchIntensity() {
+        if (CANONICAL_MODE) return;
         var url = "https://raw.githubusercontent.com/ivxxbeats/farcaster-intensity/main/intensity.json";
         fetch(url + "?t=" + Date.now())
             .then(function(r) { return r.json(); })
@@ -167,73 +324,8 @@
     }
     
     // ============================================================
-    // TRAIT GENERATION
+    // BASE TRAITS GENERATION
     // ============================================================
-    function rollRarityClass(rng) {
-        return weightedPick(
-            [RARITY_CLASSES.COMMON, RARITY_CLASSES.UNCOMMON, RARITY_CLASSES.RARE, RARITY_CLASSES.MYTHIC, RARITY_CLASSES.GRAIL],
-            [0.60, 0.25, 0.10, 0.04, 0.01],
-            rng
-        );
-    }
-    
-    function rollArchetype(rarityClass, rng) {
-        if (rarityClass === RARITY_CLASSES.GRAIL) {
-            return weightedPick(ARCHETYPES, [0.12, 0.14, 0.18, 0.12, 0.28, 0.16], rng);
-        }
-        switch (rarityClass) {
-            case RARITY_CLASSES.COMMON: return weightedPick(ARCHETYPES, [0.20, 0.18, 0.15, 0.17, 0.18, 0.12], rng);
-            case RARITY_CLASSES.UNCOMMON: return weightedPick(ARCHETYPES, [0.17, 0.17, 0.17, 0.17, 0.18, 0.14], rng);
-            case RARITY_CLASSES.RARE: return weightedPick(ARCHETYPES, [0.14, 0.16, 0.20, 0.16, 0.18, 0.16], rng);
-            case RARITY_CLASSES.MYTHIC: return weightedPick(ARCHETYPES, [0.10, 0.14, 0.22, 0.14, 0.20, 0.20], rng);
-            default: return "Signal";
-        }
-    }
-    
-    function rollAnchorForm(archetype, rng) {
-        switch (archetype) {
-            case "Signal": return weightedPick(ANCHOR_FORMS, [0.10, 0.28, 0.08, 0.30, 0.18, 0.06], rng);
-            case "Drift": return weightedPick(ANCHOR_FORMS, [0.18, 0.22, 0.06, 0.08, 0.32, 0.14], rng);
-            case "Rift": return weightedPick(ANCHOR_FORMS, [0.06, 0.08, 0.46, 0.12, 0.10, 0.18], rng);
-            case "Core": return weightedPick(ANCHOR_FORMS, [0.32, 0.26, 0.06, 0.16, 0.10, 0.10], rng);
-            case "Prism": return weightedPick(ANCHOR_FORMS, [0.12, 0.30, 0.10, 0.20, 0.16, 0.12], rng);
-            case "Void": return weightedPick(ANCHOR_FORMS, [0.28, 0.16, 0.18, 0.14, 0.08, 0.16], rng);
-            default: return "Aether";
-        }
-    }
-    
-    function generateCollectionTraits(rng, tokenNum) {
-        const rarityClass = rollRarityClass(rng);
-        const archetype = rollArchetype(rarityClass, rng);
-        const anchorForm = rollAnchorForm(archetype, rng);
-        const engineType = weightedPick(ENGINE_TYPES, rarityClass === "Grail" ? [0.10, 0.20, 0.70] : [0.78, 0.19, 0.03], rng);
-        const primaryDriver = weightedPick(PRIMARY_DRIVERS, [0.35, 0.25, 0.25, 0.15], rng);
-        const engineConfig = getEngineConfig(engineType);
-        
-        const spatialBehavior = engineConfig.allowedCompositions[Math.floor(rng() * engineConfig.allowedCompositions.length)];
-        const colors = ["Ethereal", "Volcanic", "StellarDrift", "Nebula", "SolarFlare", "DeepVoid", "PrismCore", "AuroraBorealis"];
-        const colorMood = colors[Math.floor(rng() * colors.length)];
-        const structureType = STRUCTURE_TYPES[Math.floor(rng() * STRUCTURE_TYPES.length)];
-        
-        const traits = {
-            "Rarity Class": rarityClass,
-            "Archetype": archetype,
-            "Anchor Form": anchorForm,
-            "Engine Type": engineType,
-            "Primary Driver": primaryDriver,
-            "Color Mood": colorMood,
-            "Spatial Behavior": spatialBehavior,
-            "Structure Type": structureType,
-            "Engine Config": engineConfig
-        };
-        
-        if (rarityClass === "Grail") {
-            traits["Anomaly Class"] = weightedPick(ANOMALY_CLASSES, [0.25, 0.25, 0.25, 0.25], rng);
-        }
-        
-        return traits;
-    }
-    
     function generateBaseTraits(seed, tokenId) {
         const streamRNGs = {};
         for(let i = 1; i <= 7; i++) streamRNGs[i] = splitSeed(seed, i);
@@ -283,6 +375,9 @@
         return { x: x, y: y };
     }
     
+    // ============================================================
+    // FRACTAL ENGINES
+    // ============================================================
     function novaFractalCalc(x0, y0, maxIter) {
         let x = x0, y = y0;
         let iter = 0;
@@ -370,58 +465,80 @@
     // ============================================================
     // COMPLEMENTARY TRAITS UI
     // ============================================================
-    function getComplementaryTraits(rarityClass, awakenedLevel, intensity, tokenNum, primaryDriver, engineType) {
+    function getComplementaryTraits(rarityClass, awakenedLevel, intensity, tokenNum, primaryDriver, engineType, failureMode) {
         let mood = intensity > 0.8 ? "Intense" : (intensity > 0.6 ? "Energetic" : (intensity > 0.4 ? "Balanced" : (intensity > 0.2 ? "Calm" : "Dormant")));
         const elements = ["Fire", "Water", "Earth", "Air", "Light", "Shadow", "Crystal", "Void"];
         const element = elements[tokenNum % elements.length];
-        return { mood, element, primaryDriver, engineType };
+        return { mood, element, primaryDriver, engineType, failureMode };
     }
     
     function updateComplementaryUI(complementary) {
         const infoEl = document.getElementById('complementaryInfo');
         if (infoEl) {
-            infoEl.innerHTML = `${complementary.engineType} · ${complementary.mood} · ${complementary.element} · Driver: ${complementary.primaryDriver}`;
+            infoEl.innerHTML = `${complementary.engineType} · ${complementary.failureMode} · ${complementary.mood} · ${complementary.element} · Driver: ${complementary.primaryDriver}`;
         }
     }
     
     // ============================================================
-    // INTENSITY EFFECTS (Viewer only - animation)
+    // INTENSITY EFFECTS (Viewer only - skipped in CANONICAL_MODE)
     // ============================================================
     let frameCount = 0;
+    let animatedPulse = 0.94;
     
     function applyIntensityEffects(ctx, w, h, intensity, now) {
-        frameCount++;
-        if (frameCount % 4 !== 0) return;
+        if (CANONICAL_MODE) return;
         
-        if (intensity > 0.2) {
-            const noiseAmount = 0.008 + intensity * 0.02;
-            for (var i = 0; i < 60; i++) {
+        frameCount++;
+        if (frameCount % 3 !== 0) return;
+        
+        animatedPulse = 0.88 + Math.sin(now * 0.0012) * 0.1;
+        
+        if (intensity > 0.15) {
+            const noiseAmount = 0.02 + intensity * 0.06;
+            for (var i = 0; i < 120; i++) {
                 if (Math.random() < noiseAmount) {
-                    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.12})`;
-                    ctx.fillRect(Math.random() * w, Math.random() * h, 1, 1);
+                    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.25})`;
+                    ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2);
                 }
             }
         }
         
-        if (Math.random() < 0.002 * intensity) {
-            const shiftX = (Math.random() - 0.5) * 2;
+        if (Math.random() < 0.008 * intensity) {
+            const shiftX = (Math.random() - 0.5) * 4;
             ctx.drawImage(ctx.canvas, shiftX, 0);
         }
         
-        if (intensity > 0.3) {
-            const vignetteStrength = intensity * 0.08;
+        if (Math.random() < 0.015 * intensity) {
+            const imgData = ctx.getImageData(0, 0, w, h);
+            const data = imgData.data;
+            for (var i = 0; i < data.length; i += 4) {
+                if (Math.random() < 0.08) {
+                    const temp = data[i];
+                    data[i] = data[i+2];
+                    data[i+2] = temp;
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+        
+        if (intensity > 0.25) {
+            const vignetteStrength = intensity * 0.2;
             const gradient = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
             gradient.addColorStop(0, 'rgba(0,0,0,0)');
-            gradient.addColorStop(0.7, `rgba(0,0,0,${vignetteStrength * 0.3})`);
+            gradient.addColorStop(0.6, `rgba(0,0,0,${vignetteStrength * 0.25})`);
             gradient.addColorStop(1, `rgba(0,0,0,${vignetteStrength})`);
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, w, h);
         }
         
-        ctx.fillStyle = "rgba(0,0,0,0.5)";
-        ctx.fillRect(10, 670, 100, 4);
-        ctx.fillStyle = `hsl(${intensity * 120}, 100%, 50%)`;
-        ctx.fillRect(10, 670, intensity * 100, 4);
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(10, 670, 100, 5);
+        ctx.fillStyle = `hsl(${intensity * 120}, 100%, 55%)`;
+        ctx.fillRect(10, 670, intensity * 100, 5);
+        
+        const hue = (now * 0.03 + intensity * 360) % 360;
+        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${intensity * 0.08})`;
+        ctx.fillRect(0, 0, w, h);
     }
     
     // ============================================================
@@ -438,7 +555,6 @@
     let tokenId = null;
     let startTime = null;
     let animationId = null;
-    let animatedPulse = 0.96;
     
     function updateOffscreen() {
         const newW = 320;
@@ -455,8 +571,6 @@
     
     function renderFrame(now) {
         if (!currentTraits || !ctx) return;
-        
-        animatedPulse = 0.94 + Math.sin(now * 0.0008) * 0.04;
         
         try {
             updateOffscreen();
@@ -478,9 +592,14 @@
             const isEcho = engineConfig.name === "Echo";
             const isGrailFlag = currentTraits["Rarity Class"] === RARITY_CLASSES.GRAIL;
             const anomalyClass = currentTraits["Anomaly Class"];
+            const failureMode = currentTraits["Failure Mode"] || "Recovering";
             
-            const complementary = getComplementaryTraits(currentTraits["Rarity Class"], awakenedLevel, liveIntensity, tokenNum, primaryDriver, engineConfig.name);
+            const complementary = getComplementaryTraits(currentTraits["Rarity Class"], awakenedLevel, liveIntensity, tokenNum, primaryDriver, engineConfig.name, failureMode);
             updateComplementaryUI(complementary);
+            
+            // Frequency index from seed (better distribution)
+            const freqSeed = makeSeededRand(masterSeed)();
+            const freqIndex = Math.floor(freqSeed * 4);
             
             const goldenOffsetX = (w / 1.618 - w/2) / w * 0.3;
             const goldenOffsetY = (h / 1.618 - h/2) / h * 0.3;
@@ -514,37 +633,28 @@
                         ry = Math.sin(va) * vr * 0.8;
                     }
                     
+                    if (isRupture) {
+                        let t_temp = canonicalTimeValue;
+                        rx += Math.sin(ry * 6 + t_temp * 4) * 0.15;
+                        ry += Math.cos(rx * 6 - t_temp * 4) * 0.15;
+                    }
+                    
                     let fractalVal = getDepthFractalValue(rx, ry, maxIter, layers, iterMult);
                     let patternVal = getPatternValue(rx, ry, frozenTime, engineConfig);
                     
-                    // ENGINE-SPECIFIC FIELD LAWS
                     let t;
                     if (isRupture) {
                         t = Math.abs(fractalVal - patternVal) + Math.sin(rx * ry * 2.5) * 0.2;
                     } else if (isEcho) {
                         t = fractalVal * 0.35 + patternVal * 0.65;
                         t = t * 0.8 + Math.sin(t * Math.PI * 2) * 0.2;
+                        t = t * 0.8 + Math.sin(t * Math.PI * 2 + Math.sin(t * 6)) * 0.2;
                     } else {
                         t = fractalVal * 0.75 + patternVal * 0.25;
                     }
                     t = Math.max(0.03, Math.min(0.97, t));
                     
-                    // Frequency Tiers with engine-specific shaping
-                    const frequencyTypes = ["low", "medium", "high", "extreme"];
-                    const freqIndex = tokenNum % 4;
-                    let freqMultiplier;
-                    switch (frequencyTypes[freqIndex]) {
-                        case "low": freqMultiplier = 3; break;
-                        case "medium": freqMultiplier = 6; break;
-                        case "high": freqMultiplier = 10; break;
-                        case "extreme": freqMultiplier = 16; break;
-                        default: freqMultiplier = 6;
-                    }
-                    t = engineFrequencyShape(t, engineConfig.name, freqMultiplier);
-                    
-                    t = Math.pow(t, 0.6);
-                    
-                    // GRAIL ANOMALY - Engine-specific manifestations
+                    // GRAIL FIRST (before frequency)
                     if (isGrailFlag && anomalyClass) {
                         if (anomalyClass === "Interference") {
                             if (engineConfig.name === "Canonical") {
@@ -582,15 +692,44 @@
                             t = Math.pow(t, engineConfig.name === "Rupture" ? 0.45 : 0.6);
                         }
                         t = Math.max(0.03, Math.min(0.97, t));
-                        t = Math.pow(t, engineConfig.name === "Rupture" ? 0.22 : 0.3);
+                        t = Math.pow(t, engineConfig.name === "Rupture" ? 0.18 : 0.25);
                     }
                     
-                    // Variation guard
+                    // Frequency AFTER Grail
+                    let freqMultiplier;
+                    switch (freqIndex) {
+                        case 0: freqMultiplier = 3; break;
+                        case 1: freqMultiplier = 6; break;
+                        case 2: freqMultiplier = 10; break;
+                        default: freqMultiplier = 16; break;
+                    }
+                    t = engineFrequencyShape(t, engineConfig.name, freqMultiplier);
+                    t = Math.pow(t, 0.6);
+                    
+                    // FAILURE MODE RESPONSE
                     let variation = Math.abs(fractalVal - patternVal);
-                    if (variation < 0.02) t += (Math.sin(rx * 12.3 + ry * 7.1) * 0.5 + 0.5) * 0.15;
+                    if (variation < 0.02) {
+                        t += (Math.sin(rx * 12.3 + ry * 7.1) * 0.5 + 0.5) * 0.12;
+                    }
                     if (variation < 0.01) {
                         const fallback = Math.sin(rx * 8 + ry * 8) * 0.5 + 0.5;
-                        t = t * (isGrailFlag ? 0.82 : 0.7) + fallback * (isGrailFlag ? 0.18 : 0.3);
+                        if (failureMode === "Recovering") {
+                            if (engineConfig.name === "Canonical") {
+                                t = t * 0.65 + fallback * 0.35;
+                            } else if (engineConfig.name === "Echo") {
+                                t = t * 0.75 + fallback * 0.25;
+                            } else {
+                                t = t * 0.90 + fallback * 0.10;
+                            }
+                        } else if (failureMode === "Residual") {
+                            t = t * 0.88 + fallback * 0.12;
+                        } else if (failureMode === "VoidBloom") {
+                            const bloom = Math.exp(-(rx * rx + ry * ry) * 1.8);
+                            t = t * 0.7 + bloom * 0.3;
+                        } else if (failureMode === "Fracture") {
+                            const crack = Math.abs(Math.sin(rx * 18 - ry * 11));
+                            t = t * 0.6 + crack * 0.4;
+                        }
                     }
                     t = Math.max(0.03, Math.min(0.97, t));
                     
@@ -598,18 +737,16 @@
                     
                     let { r, g, b } = getRichColor(t, currentTraits["Color Mood"] || "Neon", frozenTime, primaryDriver);
                     
-                    // Engine-specific color discipline
                     let colorDisciplined = engineColorDiscipline(r, g, b, engineConfig.name, t, frozenTime);
                     r = colorDisciplined.r;
                     g = colorDisciplined.g;
                     b = colorDisciplined.b;
                     
                     const sigColor = signatureColor(t, frozenTime);
-                    r = r * 0.8 + sigColor.r * 0.2;
-                    g = g * 0.8 + sigColor.g * 0.2;
-                    b = b * 0.8 + sigColor.b * 0.2;
+                    r = r * 0.65 + sigColor.r * 0.35;
+                    g = g * 0.65 + sigColor.g * 0.35;
+                    b = b * 0.65 + sigColor.b * 0.35;
                     
-                    // SpectralSplit Grail: break color harmony per engine
                     if (isGrailFlag && anomalyClass === "SpectralSplit") {
                         if (engineConfig.name === "Canonical") {
                             r = Math.min(1, r * 1.18);
@@ -626,10 +763,12 @@
                         }
                     }
                     
-                    // Animation applied here
-                    r = r * animatedPulse;
-                    g = g * animatedPulse;
-                    b = b * animatedPulse;
+                    // Animation applied only in live mode
+                    if (!CANONICAL_MODE) {
+                        r = r * animatedPulse;
+                        g = g * animatedPulse;
+                        b = b * animatedPulse;
+                    }
                     
                     const idx = (y * w + x) * 4;
                     data[idx] = Math.min(255, Math.max(0, Math.floor(r * 255)));
@@ -643,7 +782,10 @@
             ctx.clearRect(0, 0, 700, 700);
             ctx.drawImage(offscreen, 0, 0, w, h, 0, 0, 700, 700);
             
-            applyIntensityEffects(ctx, 700, 700, liveIntensity, now);
+            // Intensity effects only in live mode
+            if (!CANONICAL_MODE) {
+                applyIntensityEffects(ctx, 700, 700, liveIntensity, now);
+            }
             
         } catch(e) {
             console.error("Render error:", e);
@@ -657,6 +799,9 @@
         animationId = requestAnimationFrame(animate);
     }
     
+    // ============================================================
+    // INITIALIZATION
+    // ============================================================
     function init() {
         canvas = document.getElementById('artCanvas');
         if (!canvas) {
@@ -670,7 +815,17 @@
         
         const params = new URLSearchParams(window.location.search);
         tokenId = params.get('tokenId') || params.get('tid') || '1';
-        const txHash = params.get('txHash') || params.get('h') || '0x0';
+        let txHash = params.get('txHash') || params.get('h');
+        
+        // Validate txHash - hard fail if missing
+        if (!txHash || txHash === "0x0") {
+            console.error("❌ Missing txHash - cannot render canonical token");
+            ctx.fillStyle = '#ff4444';
+            ctx.font = '14px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('Error: Missing txHash', 350, 350);
+            return;
+        }
         
         console.log("Token:", tokenId, "TX:", txHash);
         
@@ -696,13 +851,16 @@
         deterministicPhase = getDeterministicPhase(masterSeed, deterministicIntensity);
         canonicalTimeValue = deterministicTime(tokenId, masterSeed, deterministicIntensity);
         
-        fetchIntensity();
-        setInterval(fetchIntensity, 30000);
+        // Only fetch live intensity in non-canonical mode
+        if (!CANONICAL_MODE) {
+            fetchIntensity();
+            setInterval(fetchIntensity, 15000);
+        }
         
         startTime = null;
         animationId = requestAnimationFrame(animate);
         
-        console.log("Viewer ready - Token:", tokenId);
+        console.log("Viewer ready - Token:", tokenId, "Canonical Mode:", CANONICAL_MODE);
     }
     
     if (document.readyState === 'loading') {
