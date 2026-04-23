@@ -1,524 +1,802 @@
-// ============================================================
-// ART OF FARCASTER - VIEWER v28.6
-// Deterministic canonical core + Engine-Aware Pressure Effects
-// NO DEBUG MODE | Consumes mint traits | Pixel validation
+﻿// ============================================================
+// dartHLGEN - VIEWER v28.2
+// Full deterministic engine + Debug Mode + Canonical Mode
 // ============================================================
 
 (function() {
     "use strict";
     
     // ============================================================
-    // VIEWER CONFIGURATION - DETERMINISTIC FIRST
+    // DEBUG CONFIGURATION (must match mint script)
     // ============================================================
-    const DEBUG_MODE = false;                    // MUST BE FALSE for determinism
-    const FORCE_GRAIL_PERCENT = 0;               // MUST BE 0 for determinism
-    const ONLY_MYTHIC_RARE_UNCOMMON = false;     // MUST BE FALSE for determinism
-    const BALANCE_NON_CANONICAL_ENGINES = false; // MUST BE FALSE for determinism
-    
-    // Live layer configuration
-    const ENABLE_LIVE_LAYER = true;              // Canonical + live pressure effects
-    const FREEZE_FRAME = false;                  // Set via URL param ?freeze=true
-    
-    // Awakening thresholds with hysteresis
-    let currentAwakenedLevel = "base";
-    let lastRawIntensity = 0.5;
+    const DEBUG_MODE = true;                    // Enable debug overrides
+    const FORCE_GRAIL_PERCENT = 80;             // 80% chance to roll Grail when DEBUG_MODE = true
+    const ONLY_MYTHIC_RARE_UNCOMMON = true;     // If true, Common is replaced by Uncommon
+    const BALANCE_NON_CANONICAL_ENGINES = true; // Echo and Rupture get equal 35% each (Canonical 30%)
+    const CANONICAL_MODE = false;               // Set true to disable live intensity & animation (match mint exactly)
     
     // ============================================================
-    // LIVE STATE
+    // SIGNATURE FUNCTIONS
+    // ============================================================
+    function signatureColor(t, time) {
+        const base = t * 30 + time;
+        const r = Math.sin(base) * 0.5 + 0.5;
+        const g = Math.sin(base + 2.094) * 0.5 + 0.5;
+        const b = Math.sin(base + 4.188) * 0.5 + 0.5;
+        return { r, g, b };
+    }
+    
+    function signatureContrast(t) {
+        const k = 6.0;
+        let result = 1.0 / (1.0 + Math.exp(-k * (t - 0.5)));
+        const ridge = Math.abs(Math.sin(t * Math.PI));
+        result = result * 0.9 + ridge * 0.1;
+        return Math.max(0.02, Math.min(0.98, result));
+    }
+    
+    // ============================================================
+    // ENGINE-SPECIFIC SHAPING FUNCTIONS
+    // ============================================================
+    function engineFrequencyShape(t, engineName, freqMultiplier) {
+        let out;
+        if (engineName === "Canonical") {
+            out = Math.sin(t * Math.PI * freqMultiplier * 0.8);
+            out = (out + 1) / 2;
+        } else if (engineName === "Echo") {
+            const a = Math.sin(t * Math.PI * freqMultiplier * 0.55);
+            const b = Math.cos(t * Math.PI * 2.0);
+            out = (a * 0.65 + b * 0.35 + 1) / 2;
+        } else {
+            out = Math.sin(t * Math.PI * freqMultiplier * 1.35);
+            out = (out + 1) / 2;
+        }
+        return Math.max(0.03, Math.min(0.97, out));
+    }
+    
+    function engineContrastShape(t, engineName) {
+        const s = signatureContrast(t);
+        if (engineName === "Canonical") return Math.pow(s, 0.92);
+        if (engineName === "Echo") return Math.pow(s, 1.12);
+        return Math.pow(s, 0.68);
+    }
+    
+    function engineColorDiscipline(r, g, b, engineName, t, time) {
+        if (engineName === "Canonical") {
+            return { r: r * 0.96, g: g * 0.96, b: b * 0.96 };
+        }
+        if (engineName === "Echo") {
+            return {
+                r: r * 0.92 + (Math.sin(time + t * 4) * 0.5 + 0.5) * 0.08,
+                g: g * 0.92 + (Math.sin(time + 2.094 + t * 4) * 0.5 + 0.5) * 0.08,
+                b: b * 0.92 + (Math.sin(time + 4.188 + t * 4) * 0.5 + 0.5) * 0.08
+            };
+        }
+        return {
+            r: Math.min(1, r * 1.06),
+            g: g * 0.88,
+            b: Math.min(1, b * 1.03)
+        };
+    }
+    
+    // ============================================================
+    // CONFIG
+    // ============================================================
+    const LOG2 = Math.log(2);
+    const RARITY_CLASSES = { COMMON: "Common", UNCOMMON: "Uncommon", RARE: "Rare", MYTHIC: "Mythic", GRAIL: "Grail" };
+    const ARCHETYPES = ["Signal", "Drift", "Rift", "Core", "Prism", "Void"];
+    const ANCHOR_FORMS = ["Aether", "PrismHeart", "Faultline", "Gate", "Nexus", "Bloom"];
+    const ENGINE_TYPES = ["Canonical", "Echo", "Rupture"];
+    const PRIMARY_DRIVERS = ["Fractal", "Pattern", "Color", "Composition"];
+    const STRUCTURE_TYPES = ["Nova", "Lattice", "Field", "Wave", "Grid", "Drift"];
+    const SPATIAL_BEHAVIORS = ["Radial", "Spiral", "FlowField", "Kaleido", "Vortex", "Asymmetrical"];
+    const ANOMALY_CLASSES = ["Interference", "Collapse", "EchoLoop", "SpectralSplit"];
+    const FAILURE_MODES = ["Recovering", "Residual", "VoidBloom", "Fracture"];
+    
+    // ============================================================
+    // HELPER FUNCTIONS
+    // ============================================================
+    function weightedPick(items, weights, rng) {
+        const r = rng();
+        let sum = 0;
+        for (let i = 0; i < items.length; i++) {
+            sum += weights[i];
+            if (r < sum) return items[i];
+        }
+        return items[items.length - 1];
+    }
+    
+    // ============================================================
+    // RARITY ROLL (with debug override)
+    // ============================================================
+    function rollRarityClass(rng) {
+        if (DEBUG_MODE && FORCE_GRAIL_PERCENT > 0) {
+            const r = rng();
+            if (r * 100 < FORCE_GRAIL_PERCENT) return RARITY_CLASSES.GRAIL;
+        }
+        const r = rng();
+        if (r < 0.60) return RARITY_CLASSES.COMMON;
+        if (r < 0.85) return RARITY_CLASSES.UNCOMMON;
+        if (r < 0.95) return RARITY_CLASSES.RARE;
+        if (r < 0.99) return RARITY_CLASSES.MYTHIC;
+        return RARITY_CLASSES.GRAIL;
+    }
+    
+    // ============================================================
+    // ARCHETYPE & ANCHOR FORM
+    // ============================================================
+    function rollArchetype(rarityClass, rng) {
+        if (rarityClass === RARITY_CLASSES.GRAIL) {
+            return weightedPick(ARCHETYPES, [0.12, 0.14, 0.18, 0.12, 0.28, 0.16], rng);
+        }
+        switch (rarityClass) {
+            case RARITY_CLASSES.COMMON: return weightedPick(ARCHETYPES, [0.20, 0.18, 0.15, 0.17, 0.18, 0.12], rng);
+            case RARITY_CLASSES.UNCOMMON: return weightedPick(ARCHETYPES, [0.17, 0.17, 0.17, 0.17, 0.18, 0.14], rng);
+            case RARITY_CLASSES.RARE: return weightedPick(ARCHETYPES, [0.14, 0.16, 0.20, 0.16, 0.18, 0.16], rng);
+            case RARITY_CLASSES.MYTHIC: return weightedPick(ARCHETYPES, [0.10, 0.14, 0.22, 0.14, 0.20, 0.20], rng);
+            default: return "Signal";
+        }
+    }
+    
+    function rollAnchorForm(archetype, rng) {
+        switch (archetype) {
+            case "Signal": return weightedPick(ANCHOR_FORMS, [0.10, 0.28, 0.08, 0.30, 0.18, 0.06], rng);
+            case "Drift": return weightedPick(ANCHOR_FORMS, [0.18, 0.22, 0.06, 0.08, 0.32, 0.14], rng);
+            case "Rift": return weightedPick(ANCHOR_FORMS, [0.06, 0.08, 0.46, 0.12, 0.10, 0.18], rng);
+            case "Core": return weightedPick(ANCHOR_FORMS, [0.32, 0.26, 0.06, 0.16, 0.10, 0.10], rng);
+            case "Prism": return weightedPick(ANCHOR_FORMS, [0.12, 0.30, 0.10, 0.20, 0.16, 0.12], rng);
+            case "Void": return weightedPick(ANCHOR_FORMS, [0.28, 0.16, 0.18, 0.14, 0.08, 0.16], rng);
+            default: return "Aether";
+        }
+    }
+    
+    // ============================================================
+    // ENGINE TYPE ROLL (with debug balancing)
+    // ============================================================
+    function rollEngineType(rng, rarityClass) {
+        if (DEBUG_MODE && BALANCE_NON_CANONICAL_ENGINES) {
+            const r = rng();
+            if (r < 0.30) return "Canonical";
+            if (r < 0.65) return "Echo";
+            return "Rupture";
+        }
+        if (rarityClass === RARITY_CLASSES.GRAIL) {
+            return weightedPick(ENGINE_TYPES, [0.10, 0.20, 0.70], rng);
+        }
+        return weightedPick(ENGINE_TYPES, [0.78, 0.19, 0.03], rng);
+    }
+    
+    // ============================================================
+    // ENGINE CONFIGURATION
+    // ============================================================
+    function getEngineConfig(engineType) {
+        switch (engineType) {
+            case "Canonical":
+                return { fractalWeight: 0.7, patternWeight: 0.3, allowedCompositions: ["Radial", "Spiral", "Kaleido"], name: "Canonical" };
+            case "Echo":
+                return { fractalWeight: 0.35, patternWeight: 0.65, allowedCompositions: ["FlowField", "Vortex", "Asymmetrical"], name: "Echo" };
+            default:
+                return { fractalWeight: 0.5, patternWeight: 0.5, allowedCompositions: ["Asymmetrical", "Vortex", "Radial"], name: "Rupture" };
+        }
+    }
+    
+    // ============================================================
+    // PRIMARY DRIVER, STRUCTURE TYPE, COLOR MOOD
+    // ============================================================
+    function rollPrimaryDriver(rng) {
+        return weightedPick(PRIMARY_DRIVERS, [0.35, 0.25, 0.25, 0.15], rng);
+    }
+    
+    function rollStructureType(rng) {
+        return STRUCTURE_TYPES[Math.floor(rng() * STRUCTURE_TYPES.length)];
+    }
+    
+    function rollColorMood(rng) {
+        const colors = ["Ethereal", "Volcanic", "StellarDrift", "Nebula", "SolarFlare", "DeepVoid", "PrismCore", "AuroraBorealis"];
+        return colors[Math.floor(rng() * colors.length)];
+    }
+    
+    // ============================================================
+    // FAILURE MODE & ANOMALY
+    // ============================================================
+    function rollFailureMode(rng, engineType, rarityClass) {
+        if (rarityClass === "Grail") {
+            if (engineType === "Rupture") {
+                return weightedPick(FAILURE_MODES, [0.05, 0.10, 0.15, 0.70], rng);
+            }
+            if (engineType === "Echo") {
+                return weightedPick(FAILURE_MODES, [0.10, 0.45, 0.30, 0.15], rng);
+            }
+            return weightedPick(FAILURE_MODES, [0.30, 0.35, 0.25, 0.10], rng);
+        }
+        if (engineType === "Canonical") {
+            return weightedPick(FAILURE_MODES, [0.70, 0.20, 0.08, 0.02], rng);
+        }
+        if (engineType === "Echo") {
+            return weightedPick(FAILURE_MODES, [0.30, 0.45, 0.20, 0.05], rng);
+        }
+        return weightedPick(FAILURE_MODES, [0.15, 0.20, 0.15, 0.50], rng);
+    }
+    
+    function rollAnomalyClass(rng) {
+        return weightedPick(ANOMALY_CLASSES, [0.25, 0.25, 0.25, 0.25], rng);
+    }
+    
+    // ============================================================
+    // TRAIT GENERATION
+    // ============================================================
+    function generateCollectionTraits(rng, tokenNum) {
+        let rarityClass = rollRarityClass(rng);
+        if (DEBUG_MODE && ONLY_MYTHIC_RARE_UNCOMMON && rarityClass === RARITY_CLASSES.COMMON) {
+            rarityClass = RARITY_CLASSES.UNCOMMON;
+        }
+        const archetype = rollArchetype(rarityClass, rng);
+        const anchorForm = rollAnchorForm(archetype, rng);
+        const engineType = rollEngineType(rng, rarityClass);
+        const primaryDriver = rollPrimaryDriver(rng);
+        const engineConfig = getEngineConfig(engineType);
+        const spatialBehavior = engineConfig.allowedCompositions[Math.floor(rng() * engineConfig.allowedCompositions.length)];
+        const colorMood = rollColorMood(rng);
+        const structureType = rollStructureType(rng);
+        const failureMode = rollFailureMode(rng, engineType, rarityClass);
+        
+        const traits = {
+            "Rarity Class": rarityClass,
+            "Archetype": archetype,
+            "Anchor Form": anchorForm,
+            "Engine Type": engineType,
+            "Primary Driver": primaryDriver,
+            "Color Mood": colorMood,
+            "Spatial Behavior": spatialBehavior,
+            "Structure Type": structureType,
+            "Engine Config": engineConfig,
+            "Failure Mode": failureMode
+        };
+        
+        if (rarityClass === RARITY_CLASSES.GRAIL) {
+            traits["Anomaly Class"] = rollAnomalyClass(rng);
+        }
+        
+        return traits;
+    }
+    
+    // ============================================================
+    // LIVE INTENSITY API (Viewer only - skipped in CANONICAL_MODE)
     // ============================================================
     let liveIntensity = 0.5;
-    let frameCount = 0;
-    let animationId = null;
-    let startTime = null;
+    let awakenedLevel = "base";
     
-    // Canvas references
-    let canvas, ctx;
-    let currentFrame = null;
-    let tokenId = null;
-    let txHash = null;
-    let mintTraits = null;           // Consumed from mint, NOT re-rolled
-    
-    // ============================================================
-    // PIXEL HASH FOR DETERMINISM VALIDATION
-    // ============================================================
-    function hashPixels(pixels) {
-        let hash = 2166136261;
-        const step = Math.max(1, Math.floor(pixels.length / 10000)); // Sample for performance
-        
-        for (let i = 0; i < pixels.length; i += step) {
-            hash ^= pixels[i];
-            hash = (hash * 16777619) >>> 0;
-            hash ^= pixels[i+1] || 0;
-            hash = (hash * 16777619) >>> 0;
-            hash ^= pixels[i+2] || 0;
-            hash = (hash * 16777619) >>> 0;
-        }
-        return (hash >>> 0).toString(16).padStart(8, '0');
-    }
-    
-    // ============================================================
-    // LIVE INTENSITY API (with fallback)
-    // ============================================================
     function fetchIntensity() {
-        if (!ENABLE_LIVE_LAYER) return;
-        
-        var url = "https://raw.githubusercontent.com/ivxxbeats/farcaster-intensity/main/intensity.json?t=" + Date.now();
-        fetch(url)
+        if (CANONICAL_MODE) return;
+        var url = "https://raw.githubusercontent.com/ivxxbeats/farcaster-intensity/main/intensity.json";
+        fetch(url + "?t=" + Date.now())
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                if (data && typeof data.intensity === 'number') {
-                    liveIntensity = Math.max(0.05, Math.min(0.95, data.intensity));
-                    
-                    // Update awakening with hysteresis
-                    updateAwakeningWithHysteresis(liveIntensity);
-                }
+                liveIntensity = data.intensity || 0.5;
+                if (liveIntensity > 0.8) awakenedLevel = "ascended";
+                else if (liveIntensity > 0.55) awakenedLevel = "awakened";
+                else awakenedLevel = "base";
             })
-            .catch(function(e) { 
-                console.warn("Intensity fetch failed, using last value:", liveIntensity);
-            });
-    }
-    
-    function updateAwakeningWithHysteresis(rawIntensity) {
-        lastRawIntensity = rawIntensity;
-        
-        if (currentAwakenedLevel === "base" && rawIntensity > 0.60) {
-            currentAwakenedLevel = "awakened";
-            console.log("✨ Awakening threshold crossed → AWAKENED");
-        } else if (currentAwakenedLevel === "awakened" && rawIntensity < 0.48) {
-            currentAwakenedLevel = "base";
-            console.log("🌙 Awakening threshold crossed → BASE");
-        }
-        
-        if (currentAwakenedLevel !== "ascended" && rawIntensity > 0.84) {
-            currentAwakenedLevel = "ascended";
-            console.log("⚡ Awakening threshold crossed → ASCENDED");
-        } else if (currentAwakenedLevel === "ascended" && rawIntensity < 0.74) {
-            currentAwakenedLevel = "awakened";
-            console.log("✨ Awakening threshold crossed → AWAKENED");
-        }
+            .catch(function(e) {});
     }
     
     // ============================================================
-    // PRESSURE-BASED EFFECTS (No random glitches)
+    // DETERMINISTIC HELPERS
     // ============================================================
-    
-    function getPressure(liveIntensity) {
-        return Math.pow(Math.max(0.05, Math.min(0.95, liveIntensity)), 1.35);
+    function getSeed(tokenId, txHash) {
+        let hash = 2166136261;
+        const str = `${txHash}_${tokenId}`;
+        for (let i = 0; i < str.length; i++) {
+            hash ^= str.charCodeAt(i);
+            hash = (hash * 16777619) >>> 0;
+        }
+        return hash >>> 0;
     }
     
-    // Engine-specific pressure responses
-    function applyEnginePressureAura(ctx, w, h, pressure, engineType) {
-        let glowAlpha;
-        
-        if (engineType === "Canonical") {
-            glowAlpha = 0.012 + pressure * 0.07;
-            ctx.fillStyle = `rgba(255,255,255,${glowAlpha})`;
-            ctx.fillRect(0, 0, w, h);
-            
-            // Axis shimmer for Canonical
-            if (pressure > 0.4) {
-                ctx.save();
-                ctx.globalAlpha = 0.02 + pressure * 0.04;
-                const shimmerX = Math.sin(Date.now() * 0.002) * 5;
-                ctx.fillStyle = `rgba(200,200,255,${0.01 + pressure * 0.03})`;
-                ctx.fillRect(w/2 - 2 + shimmerX, 0, 4, h);
-                ctx.restore();
-            }
-        } 
-        else if (engineType === "Echo") {
-            glowAlpha = 0.008 + pressure * 0.05;
-            ctx.fillStyle = `rgba(200,200,255,${glowAlpha})`;
-            ctx.fillRect(0, 0, w, h);
-            
-            // Recursive ghost trails for Echo
-            if (pressure > 0.3) {
-                ctx.save();
-                ctx.globalAlpha = 0.02 + pressure * 0.06;
-                const trailOffset = 3 + pressure * 8;
-                ctx.drawImage(canvas, trailOffset, 0);
-                ctx.drawImage(canvas, -trailOffset, 0);
-                ctx.restore();
-            }
-        } 
-        else { // Rupture
-            glowAlpha = 0.006 + pressure * 0.04;
-            ctx.fillStyle = `rgba(255,200,200,${glowAlpha})`;
-            ctx.fillRect(0, 0, w, h);
-        }
+    function makeSeededRand(seed) {
+        let state = seed >>> 0;
+        return function() {
+            state ^= state << 13;
+            state ^= state >>> 17;
+            state ^= state << 5;
+            state = (state ^ (state >>> 11)) >>> 0;
+            return (state >>> 0) / 0xffffffff;
+        };
     }
     
-    function applyEchoResonance(ctx, w, h, pressure, now) {
-        if (pressure < 0.2) return;
-        
-        const phaseWobble = Math.sin(now * 0.002) * (2 + pressure * 8);
-        const breathing = 0.5 + Math.sin(now * 0.001) * 0.3;
-        
-        ctx.save();
-        ctx.globalAlpha = 0.01 + pressure * 0.05 * breathing;
-        ctx.drawImage(canvas, phaseWobble * 0.5, 0);
-        ctx.restore();
+    function splitSeed(seed, streamId) { 
+        let state = (seed ^ (streamId * 0x9e3779b9)) >>> 0; 
+        return function() { 
+            state ^= state << 13; 
+            state ^= state >>> 17; 
+            state ^= state << 5; 
+            state = (state ^ (state >>> 11)) >>> 0; 
+            return (state >>> 0) / 0xffffffff; 
+        }; 
     }
     
-    function applyRuptureSeams(ctx, w, h, pressure, now) {
-        if (pressure < 0.15) return;
-        
-        const seamCount = Math.floor(1 + pressure * 12);
-        const seamBrightness = 0.03 + pressure * 0.12;
-        
-        for (let i = 0; i < seamCount; i++) {
-            const y = (Math.sin(now * 0.003 + i) * 0.5 + 0.5) * h;
-            ctx.fillStyle = `rgba(255,255,255,${seamBrightness * (0.5 + Math.sin(now * 0.005 + i) * 0.5)})`;
-            ctx.fillRect(0, y, w, 1 + Math.floor(pressure * 3));
-        }
-        
-        // Row shift for high pressure Rupture
-        if (pressure > 0.6) {
-            const imgData = ctx.getImageData(0, 0, w, h);
-            const data = imgData.data;
-            const shiftAmount = Math.sin(now * 0.008) * 6 * pressure;
-            
-            for (let y = 0; y < h; y += 8) {
-                const shift = Math.floor(shiftAmount * Math.sin(y * 0.03));
-                if (Math.abs(shift) > 1) {
-                    const rowStart = y * w * 4;
-                    const tempRow = new Uint8ClampedArray(data.subarray(rowStart, rowStart + w * 4));
-                    const newStart = rowStart + shift * 4;
-                    if (newStart >= 0 && newStart + w * 4 <= data.length) {
-                        data.set(tempRow, newStart);
-                    }
-                }
-            }
-            ctx.putImageData(imgData, 0, 0);
-        }
+    function deterministicTime(tokenId, masterSeed, intensity) {
+        const tokenNum = parseInt(tokenId, 10) || 0;
+        return ((tokenNum * 0.0123456789) + (masterSeed * 0.0000001) + (intensity * 0.1)) % 1.0;
     }
     
-    // Failure mode responses (pressure-driven, not random)
-    function applyFailureModeResponse(ctx, w, h, pressure, traits, now) {
-        const failureMode = traits?.failureMode;
-        if (!failureMode) return;
-        
-        if (failureMode === "Fracture") {
-            const crackDensity = Math.floor(1 + pressure * 8);
-            const crackBrightness = 0.04 + pressure * 0.1;
-            
-            for (let i = 0; i < crackDensity; i++) {
-                const y = (Math.sin(now * 0.004 + i) * 0.5 + 0.5) * h;
-                ctx.fillStyle = `rgba(255,255,255,${crackBrightness})`;
-                ctx.fillRect(0, y, w, 1);
-            }
-        } 
-        else if (failureMode === "VoidBloom") {
-            const bloomDepth = 0.2 + pressure * 0.5;
-            const gradient = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
-            gradient.addColorStop(0, `rgba(0,0,0,${0.1 * pressure})`);
-            gradient.addColorStop(0.4, `rgba(0,0,0,${0.2 * pressure})`);
-            gradient.addColorStop(1, `rgba(0,0,0,${bloomDepth})`);
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, w, h);
-        }
-        else if (failureMode === "Recovering") {
-            // Sharpening pulse - field pulls together
-            ctx.save();
-            ctx.globalAlpha = 0.92 + pressure * 0.04;
-            ctx.drawImage(canvas, 0, 0);
-            ctx.restore();
-        }
-        else if (failureMode === "Residual") {
-            // Lingering haze
-            ctx.save();
-            ctx.globalAlpha = 0.03 + pressure * 0.08;
-            ctx.fillStyle = `rgba(150,150,200,${0.02 + pressure * 0.06})`;
-            ctx.fillRect(0, 0, w, h);
-            ctx.restore();
-        }
-    }
-    
-    // Anomaly responses
-    function applyAnomalyResponse(ctx, w, h, pressure, traits, now) {
-        const anomalyClass = traits?.anomalyClass;
-        if (!anomalyClass || anomalyClass === "None") return;
-        
-        if (anomalyClass === "SpectralSplit") {
-            const colorStress = 0.02 + pressure * 0.08;
-            ctx.fillStyle = `rgba(255,50,100,${colorStress})`;
-            ctx.fillRect(0, 0, w, h);
-        }
-        else if (anomalyClass === "PhaseInversion") {
-            ctx.save();
-            ctx.globalAlpha = 0.01 + pressure * 0.06;
-            ctx.drawImage(canvas, 0, 0);
-            ctx.restore();
-        }
-        else if (anomalyClass === "GravityWell") {
-            const wellDepth = 0.1 + pressure * 0.4;
-            const gradient = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
-            gradient.addColorStop(0, `rgba(0,0,0,${wellDepth * 0.5})`);
-            gradient.addColorStop(1, `rgba(0,0,0,${wellDepth})`);
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, w, h);
-        }
-    }
-    
-    // Signature pulse - one effect every token shares
-    function applySignaturePulse(ctx, w, h, pressure, now) {
-        const sig = Math.max(0, Math.sin((now * 0.001 + pressure * 5) * Math.PI)) * 0.018;
-        ctx.fillStyle = `rgba(255,255,255,${sig})`;
-        ctx.fillRect(0, 0, w, h);
-    }
-    
-    // Vignette (pressure-driven)
-    function applyPressureVignette(ctx, w, h, pressure) {
-        if (pressure < 0.15) return;
-        
-        const vignetteStrength = pressure * 0.22;
-        const gradient = ctx.createRadialGradient(w/2, h/2, w * 0.2, w/2, h/2, w/2);
-        gradient.addColorStop(0, 'rgba(0,0,0,0)');
-        gradient.addColorStop(0.5, `rgba(0,0,0,${vignetteStrength * 0.3})`);
-        gradient.addColorStop(1, `rgba(0,0,0,${vignetteStrength})`);
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, w, h);
-    }
-    
-    // Center emphasis (reinforces composition)
-    function applyCenterEmphasis(ctx, w, h, pressure) {
-        const cx = w / 2;
-        const cy = h / 2;
-        
-        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, w/2);
-        grad.addColorStop(0, `rgba(255,255,255,${0.02 * pressure})`);
-        grad.addColorStop(1, `rgba(0,0,0,${0.08 * pressure})`);
-        
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, w, h);
+    function getDeterministicPhase(masterSeed, intensity) {
+        return Math.floor((masterSeed + intensity * 10000)) % 4;
     }
     
     // ============================================================
-    // MAIN POST EFFECTS FUNCTION (No random glitches)
+    // BASE TRAITS GENERATION
     // ============================================================
-    function applyPostEffects(ctx, w, h, intensity, now, currentFrame) {
-        if (!ENABLE_LIVE_LAYER) return;
-        if (!currentFrame) return;
+    function generateBaseTraits(seed, tokenId) {
+        const streamRNGs = {};
+        for(let i = 1; i <= 7; i++) streamRNGs[i] = splitSeed(seed, i);
         
-        const pressure = getPressure(intensity);
-        const engineType = currentFrame.traits?.engineType || "Canonical";
-        
-        // 1. Engine-specific pressure aura
-        applyEnginePressureAura(ctx, w, h, pressure, engineType);
-        
-        // 2. Engine-specific motion
-        if (engineType === "Echo") {
-            applyEchoResonance(ctx, w, h, pressure, now);
-        } else if (engineType === "Rupture") {
-            applyRuptureSeams(ctx, w, h, pressure, now);
+        const tokenOffset = parseInt(tokenId, 10) || 0;
+        const steps = (tokenOffset * 997) % 1000;
+        for (let i = 0; i < steps; i++) {
+            for(let s = 1; s <= 7; s++) if(streamRNGs[s]) streamRNGs[s]();
         }
         
-        // 3. Failure mode response
-        applyFailureModeResponse(ctx, w, h, pressure, currentFrame.traits, now);
+        const traitsRNG = streamRNGs[1];
+        const varietyRNG = streamRNGs[2];
         
-        // 4. Anomaly response
-        applyAnomalyResponse(ctx, w, h, pressure, currentFrame.traits, now);
+        const zoomVariety = 0.5 + varietyRNG() * 1.3;
+        const offsetVarietyX = (varietyRNG() - 0.5) * 2.0;
+        const offsetVarietyY = (varietyRNG() - 0.5) * 2.0;
+        const iterVariety = 40 + Math.floor(varietyRNG() * 200);
         
-        // 5. Signature pulse (universal)
-        applySignaturePulse(ctx, w, h, pressure, now);
+        const densityIndex = Math.floor(varietyRNG() * 4);
+        let iterMult = 1.0, layers = 3;
+        if (densityIndex === 0) { iterMult = 0.6; layers = 2; }
+        else if (densityIndex === 2) { iterMult = 1.2; layers = 3; }
+        else if (densityIndex === 3) { iterMult = 1.3; layers = 3; }
         
-        // 6. Pressure vignette
-        applyPressureVignette(ctx, w, h, pressure);
-        
-        // 7. Center emphasis
-        applyCenterEmphasis(ctx, w, h, pressure);
-        
-        // 8. UI intensity bar
-        ctx.fillStyle = "rgba(0,0,0,0.6)";
-        ctx.fillRect(10, h - 30, 100, 5);
-        ctx.fillStyle = `hsl(${intensity * 120}, 100%, 55%)`;
-        ctx.fillRect(10, h - 30, intensity * 100, 5);
-        
-        // 9. Awakening label with pressure glow
-        if (currentAwakenedLevel !== "base") {
-            ctx.font = 'bold 10px monospace';
-            const glowIntensity = 0.3 + pressure * 0.5;
-            ctx.fillStyle = currentAwakenedLevel === "ascended" 
-                ? `rgba(255,0,255,${glowIntensity})` 
-                : `rgba(0,255,255,${glowIntensity})`;
-            ctx.textAlign = 'right';
-            ctx.fillText(currentAwakenedLevel.toUpperCase(), w - 15, h - 25);
+        return {
+            zoom: (0.5 + traitsRNG() * 0.8) * zoomVariety,
+            offsetX: (traitsRNG() - 0.5) * 1.0 + offsetVarietyX,
+            offsetY: (traitsRNG() - 0.5) * 1.0 + offsetVarietyY,
+            baseMaxIter: 60 + Math.floor(traitsRNG() * 140) + iterVariety,
+            iterMult: iterMult,
+            layers: layers
+        };
+    }
+    
+    // ============================================================
+    // RENDER HELPERS
+    // ============================================================
+    function applyArchetypeGeometry(archetype, x, y) {
+        switch(archetype) {
+            case "Signal": x *= 0.8; y *= 0.8; break;
+            case "Drift": x += Math.sin(y * 2) * 0.4; break;
+            case "Rift": x *= 1.6; break;
+            case "Core": y *= 0.5; break;
+            case "Prism": x = Math.abs(x); y = Math.abs(y); break;
+            case "Void": x *= -1; y *= -1; break;
         }
+        return { x: x, y: y };
+    }
+    
+    // ============================================================
+    // FRACTAL ENGINES
+    // ============================================================
+    function novaFractalCalc(x0, y0, maxIter) {
+        let x = x0, y = y0;
+        let iter = 0;
+        for (iter = 0; iter < maxIter; iter++) {
+            const x2 = x * x, y2 = y * y;
+            if (x2 + y2 > 4.0) break;
+            const xt = x2 - y2 + x0;
+            y = 2.0 * x * y + y0;
+            x = xt;
+        }
+        let smooth;
+        if (iter < maxIter) {
+            const mag2 = x * x + y * y;
+            const safeMag2 = Math.max(mag2, 1e-10);
+            const logZn = Math.log(safeMag2) * 0.5;
+            const nu = Math.log(logZn / LOG2) / LOG2;
+            smooth = (iter + 1 - nu) / maxIter;
+        } else {
+            smooth = 1.0;
+        }
+        return Math.max(0.02, Math.min(0.98, smooth));
+    }
+    
+    function getDepthFractalValue(x, y, maxIter, layers, iterMult) {
+        let depth = 0;
+        for (let i = 0; i < layers; i++) {
+            const scale = 1 + i * 0.15;
+            depth += novaFractalCalc(x * scale, y * scale, Math.floor(maxIter * iterMult * 0.7));
+        }
+        return depth / layers;
+    }
+    
+    function getPatternValue(x, y, time, engineConfig) {
+        const r = Math.sqrt(x * x + y * y);
+        const a = Math.atan2(y, x);
+        
+        if (engineConfig.name === "Echo") {
+            let val = Math.sin(a * 3 - r * 12 + time) * 0.4;
+            val += Math.sin(a * 6 + r * 6 - time * 0.3) * 0.2;
+            return Math.max(0.02, Math.min(0.98, (val + 0.5)));
+        } else if (engineConfig.name === "Rupture") {
+            let val = Math.sin(a * 8 - r * 25 + time * 2) * 0.3;
+            val += Math.sin(a * 16 + r * 15 - time * 1.5) * 0.2;
+            val += Math.sin(r * 30) * 0.15;
+            return Math.max(0.02, Math.min(0.98, (val + 0.5)));
+        } else {
+            let val = Math.sin(a * 5 - r * 18 + time) * 0.35;
+            val += Math.sin(a * 10 + r * 9 - time * 0.5) * 0.15;
+            return Math.max(0.02, Math.min(0.98, (val + 0.5)));
+        }
+    }
+    
+    function applyCompositionTransform(ux, uy, composition, zoom, offsetX, offsetY) {
+        let x = ux / zoom + offsetX;
+        let y = uy / zoom + offsetY;
+        
+        switch(composition) {
+            case "Radial": const r = Math.sqrt(x*x+y*y); const a = Math.atan2(y,x); x = a; y = r; break;
+            case "Spiral": const sr = Math.sqrt(x*x+y*y); const sa = Math.atan2(y,x); const spiralR = Math.pow(sr,0.7)*1.5; x = Math.cos(sa+spiralR*4)*spiralR; y = Math.sin(sa+spiralR*4)*spiralR; break;
+            case "FlowField": const angle = Math.sin(x*3)*Math.cos(y*3); const cosA = Math.cos(angle); const sinA = Math.sin(angle); const nx = x*cosA - y*sinA; const ny = x*sinA + y*cosA; x = nx; y = ny; break;
+            case "Kaleido": let angleK = Math.atan2(y, x); let radiusK = Math.sqrt(x*x + y*y); let segments = 6; angleK = (angleK % (Math.PI * 2 / segments)); if (angleK > Math.PI / segments) angleK = (Math.PI * 2 / segments) - angleK; x = Math.cos(angleK) * radiusK; y = Math.sin(angleK) * radiusK; break;
+            case "Vortex": let vr = Math.sqrt(x*x + y*y); let va = Math.atan2(y, x); va += vr * 2.0; x = Math.cos(va) * vr; y = Math.sin(va) * vr; break;
+            case "Asymmetrical": x *= 1.3; y *= 0.6; break;
+            default: break;
+        }
+        return { x, y };
+    }
+    
+    function getRichColor(t, colorMood, time, primaryDriver) {
+        let r, g, b;
+        if (primaryDriver === "Color") {
+            r = Math.sin(t * 40 + time) * 0.5 + 0.5;
+            g = Math.sin(t * 40 + 2.094 + time) * 0.5 + 0.5;
+            b = Math.sin(t * 40 + 4.188 + time) * 0.5 + 0.5;
+            return { r: Math.min(0.85, Math.max(0.15, r)), g: Math.min(0.85, Math.max(0.15, g)), b: Math.min(0.85, Math.max(0.15, b)) };
+        }
+        switch(colorMood) {
+            case "Volcanic": r = 1.0; g = 0.1 + 0.7 * Math.sin(t * 12 + time); b = 0.0; break;
+            case "SolarFlare": r = 1.0; g = 0.5 + 0.5 * Math.sin(t * 14 + time); b = 0.0; break;
+            default: r = Math.sin(t * 25 + time) * 0.7 + 0.5; g = Math.sin(t * 25 + 2.094 + time * 1.3) * 0.7 + 0.5; b = Math.sin(t * 25 + 4.188 + time * 0.7) * 0.7 + 0.5; break;
+        }
+        return { r: Math.min(0.85, Math.max(0.15, r)), g: Math.min(0.85, Math.max(0.15, g)), b: Math.min(0.85, Math.max(0.15, b)) };
     }
     
     // ============================================================
     // COMPLEMENTARY TRAITS UI
     // ============================================================
-    function getComplementaryTraits(traits, awakeningLevel, intensity) {
+    function getComplementaryTraits(rarityClass, awakenedLevel, intensity, tokenNum, primaryDriver, engineType, failureMode) {
         let mood = intensity > 0.8 ? "Intense" : (intensity > 0.6 ? "Energetic" : (intensity > 0.4 ? "Balanced" : (intensity > 0.2 ? "Calm" : "Dormant")));
         const elements = ["Fire", "Water", "Earth", "Air", "Light", "Shadow", "Crystal", "Void"];
-        const tokenNum = parseInt(tokenId, 10) || 1;
         const element = elements[tokenNum % elements.length];
-        return { 
-            mood, 
-            element, 
-            engineType: traits.engineType, 
-            failureMode: traits.failureMode,
-            rarityClass: traits.rarityClass,
-            awakeningLevel: awakeningLevel,
-            anomalyClass: traits.anomalyClass || 'None',
-            eventScore: traits.eventScore || 0
-        };
+        return { mood, element, primaryDriver, engineType, failureMode };
     }
     
     function updateComplementaryUI(complementary) {
         const infoEl = document.getElementById('complementaryInfo');
         if (infoEl) {
-            infoEl.innerHTML = `${complementary.engineType} · ${complementary.rarityClass} · ${complementary.failureMode} · ${complementary.anomalyClass} · ${complementary.awakeningLevel} · ${complementary.mood} · ${complementary.element} · ES:${complementary.eventScore}`;
-        }
-        
-        const titleEl = document.getElementById('tokenTitle');
-        if (titleEl && currentFrame) {
-            titleEl.innerHTML = `Art of Farcaster #${tokenId}<br><small>${currentFrame.traits.engineType} · ${currentFrame.traits.rarityClass} · ${currentFrame.awakeningState.level}</small>`;
+            infoEl.innerHTML = `${complementary.engineType} Â· ${complementary.failureMode} Â· ${complementary.mood} Â· ${complementary.element} Â· Driver: ${complementary.primaryDriver}`;
         }
     }
     
     // ============================================================
-    // CANONICAL RENDER (consumes mint traits)
+    // INTENSITY EFFECTS (Viewer only - skipped in CANONICAL_MODE)
     // ============================================================
-    function drawPixelsToCanvas(canvas, pixels, srcW, srcH, destW, destH) {
-        canvas.width = destW;
-        canvas.height = destH;
-        const ctx = canvas.getContext('2d');
-        const imgData = ctx.createImageData(destW, destH);
-        
-        for (let y = 0; y < destH; y++) {
-            for (let x = 0; x < destW; x++) {
-                const srcX = Math.floor(x * srcW / destW);
-                const srcY = Math.floor(y * srcH / destH);
-                const srcIdx = (srcY * srcW + srcX) * 4;
-                const dstIdx = (y * destW + x) * 4;
-                imgData.data[dstIdx] = pixels[srcIdx];
-                imgData.data[dstIdx + 1] = pixels[srcIdx + 1];
-                imgData.data[dstIdx + 2] = pixels[srcIdx + 2];
-                imgData.data[dstIdx + 3] = 255;
-            }
-        }
-        ctx.putImageData(imgData, 0, 0);
-    }
+    let frameCount = 0;
+    let animatedPulse = 0.94;
     
-    function renderCanonicalFrameAndDraw() {
-        try {
-            if (typeof renderCanonicalFrame !== 'function') {
-                console.error("Canonical core not loaded - make sure sketch.js is loaded first");
-                if (ctx) {
-                    ctx.fillStyle = '#ff4444';
-                    ctx.font = '14px monospace';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('Error: Canonical core not loaded', 350, 350);
-                }
-                return false;
-            }
-            
-            // CRITICAL: Use txHash from URL with fallback for Highlight delay
-            let finalTxHash = txHash;
-            if (!finalTxHash || finalTxHash === "0x0" || finalTxHash === "null" || finalTxHash === "") {
-                console.warn("⚠️ Missing txHash, using fallback seed for determinism");
-                finalTxHash = `fallback_${tokenId}_${Date.now()}`;
-            }
-            
-            const debugOptions = null; // NO DEBUG MODE - determinism first
-            
-            const result = renderCanonicalFrame({
-                tokenId: parseInt(tokenId, 10),
-                txHash: finalTxHash,
-                width: 320,
-                height: 320,
-                customMintData: null,
-                debugOptions: debugOptions
-            });
-            
-            currentFrame = result;
-            
-            // Store mint traits for UI
-            mintTraits = result.traits;
-            
-            // Calculate pixel hash for determinism validation
-            const pixelHash = hashPixels(result.pixels);
-            
-            // Draw pixels to canvas
-            drawPixelsToCanvas(canvas, result.pixels, 320, 320, 700, 700);
-            
-            // Update UI with deterministic traits
-            const complementary = getComplementaryTraits(
-                result.traits, 
-                result.awakeningState.level, 
-                result.canonicalIntensity
-            );
-            updateComplementaryUI(complementary);
-            
-            console.log(`🎨 Viewer: Token #${tokenId}`);
-            console.log(`   Engine: ${result.traits.engineType}`);
-            console.log(`   Rarity: ${result.traits.rarityClass}`);
-            console.log(`   Awakening: ${result.awakeningState.level}`);
-            console.log(`   Event Score: ${result.eventScore || 0}`);
-            console.log(`   Pixel Hash: ${pixelHash}`);
-            
-            return true;
-            
-        } catch(e) {
-            console.error("Canonical render error:", e);
-            if (ctx) {
-                ctx.fillStyle = '#ff4444';
-                ctx.font = '14px monospace';
-                ctx.textAlign = 'center';
-                ctx.fillText('Render Error: ' + e.message, 350, 350);
-            }
-            return false;
-        }
-    }
-    
-    // ============================================================
-    // ANIMATION LOOP (with freeze-frame support)
-    // ============================================================
-    function animate(timestamp) {
-        if (!startTime) startTime = timestamp;
-        
-        // FREEZE FRAME support - if frozen, use static time
-        const now = FREEZE_FRAME ? 0 : (timestamp - startTime);
-        
-        if (currentFrame) {
-            // Always redraw canonical base
-            drawPixelsToCanvas(canvas, currentFrame.pixels, 320, 320, 700, 700);
-            
-            // Apply live layer on top if enabled and not frozen
-            if (ENABLE_LIVE_LAYER && !FREEZE_FRAME) {
-                applyPostEffects(ctx, 700, 700, liveIntensity, now, currentFrame);
-                
-                const complementary = getComplementaryTraits(
-                    currentFrame.traits,
-                    currentAwakenedLevel,
-                    liveIntensity
-                );
-                updateComplementaryUI(complementary);
-            } else if (frameCount === 0) {
-                const complementary = getComplementaryTraits(
-                    currentFrame.traits,
-                    currentFrame.awakeningState.level,
-                    currentFrame.canonicalIntensity
-                );
-                updateComplementaryUI(complementary);
-            }
-        }
+    function applyIntensityEffects(ctx, w, h, intensity, now) {
+        if (CANONICAL_MODE) return;
         
         frameCount++;
-        animationId = requestAnimationFrame(animate);
+        if (frameCount % 3 !== 0) return;
+        
+        animatedPulse = 0.88 + Math.sin(now * 0.0012) * 0.1;
+        
+        if (intensity > 0.15) {
+            const noiseAmount = 0.02 + intensity * 0.06;
+            for (var i = 0; i < 120; i++) {
+                if (Math.random() < noiseAmount) {
+                    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.25})`;
+                    ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2);
+                }
+            }
+        }
+        
+        if (Math.random() < 0.008 * intensity) {
+            const shiftX = (Math.random() - 0.5) * 4;
+            ctx.drawImage(ctx.canvas, shiftX, 0);
+        }
+        
+        if (Math.random() < 0.015 * intensity) {
+            const imgData = ctx.getImageData(0, 0, w, h);
+            const data = imgData.data;
+            for (var i = 0; i < data.length; i += 4) {
+                if (Math.random() < 0.08) {
+                    const temp = data[i];
+                    data[i] = data[i+2];
+                    data[i+2] = temp;
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+        
+        if (intensity > 0.25) {
+            const vignetteStrength = intensity * 0.2;
+            const gradient = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2);
+            gradient.addColorStop(0, 'rgba(0,0,0,0)');
+            gradient.addColorStop(0.6, `rgba(0,0,0,${vignetteStrength * 0.25})`);
+            gradient.addColorStop(1, `rgba(0,0,0,${vignetteStrength})`);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, w, h);
+        }
+        
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(10, 670, 100, 5);
+        ctx.fillStyle = `hsl(${intensity * 120}, 100%, 55%)`;
+        ctx.fillRect(10, 670, intensity * 100, 5);
+        
+        const hue = (now * 0.03 + intensity * 360) % 360;
+        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${intensity * 0.08})`;
+        ctx.fillRect(0, 0, w, h);
     }
     
     // ============================================================
-    // RESIZE HANDLER
+    // RENDER ENGINE
     // ============================================================
-    function handleResize() {
-        if (canvas && currentFrame) {
-            drawPixelsToCanvas(canvas, currentFrame.pixels, 320, 320, 700, 700);
-            if (ENABLE_LIVE_LAYER && ctx && !FREEZE_FRAME) {
-                applyPostEffects(ctx, 700, 700, liveIntensity, performance.now(), currentFrame);
-            }
+    let canvas, ctx;
+    let offscreen, offCtx;
+    let w = 320, h = 320;
+    let currentTraits = null;
+    let masterSeed = null;
+    let baseTraits = null;
+    let deterministicPhase = 0;
+    let canonicalTimeValue = 0;
+    let tokenId = null;
+    let startTime = null;
+    let animationId = null;
+    
+    function updateOffscreen() {
+        const newW = 320;
+        const newH = 320;
+        if (!offscreen || offscreen.width !== newW || offscreen.height !== newH) {
+            offscreen = document.createElement('canvas');
+            offscreen.width = newW;
+            offscreen.height = newH;
+            offCtx = offscreen.getContext('2d');
         }
+        w = offscreen.width;
+        h = offscreen.height;
+    }
+    
+    function renderFrame(now) {
+        if (!currentTraits || !ctx) return;
+        
+        try {
+            updateOffscreen();
+            const imgData = offCtx.createImageData(w, h);
+            const data = imgData.data;
+            const intensity = liveIntensity;
+            const frozenTime = canonicalTimeValue;
+            const zoom = baseTraits?.zoom || 1.0;
+            let offsetX = baseTraits?.offsetX || 0;
+            let offsetY = baseTraits?.offsetY || 0;
+            const maxIter = baseTraits?.baseMaxIter || 120;
+            const layers = baseTraits?.layers || 3;
+            const iterMult = baseTraits?.iterMult || 1.0;
+            
+            const tokenNum = parseInt(tokenId) || 1;
+            const engineConfig = currentTraits["Engine Config"];
+            const primaryDriver = currentTraits["Primary Driver"];
+            const isRupture = engineConfig.name === "Rupture";
+            const isEcho = engineConfig.name === "Echo";
+            const isGrailFlag = currentTraits["Rarity Class"] === RARITY_CLASSES.GRAIL;
+            const anomalyClass = currentTraits["Anomaly Class"];
+            const failureMode = currentTraits["Failure Mode"] || "Recovering";
+            
+            const complementary = getComplementaryTraits(currentTraits["Rarity Class"], awakenedLevel, liveIntensity, tokenNum, primaryDriver, engineConfig.name, failureMode);
+            updateComplementaryUI(complementary);
+            
+            // Frequency index from seed (better distribution)
+            const freqSeed = makeSeededRand(masterSeed)();
+            const freqIndex = Math.floor(freqSeed * 4);
+            
+            const goldenOffsetX = (w / 1.618 - w/2) / w * 0.3;
+            const goldenOffsetY = (h / 1.618 - h/2) / h * 0.3;
+            const adjustedOffsetX = offsetX + goldenOffsetX;
+            const adjustedOffsetY = offsetY + goldenOffsetY;
+            
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    let ux = (x / w) * 4.0 - 2.5;
+                    let uy = (y / h) * 4.0 - 2.0;
+                    ux *= w / h;
+                    
+                    let transformed = applyCompositionTransform(ux, uy, currentTraits["Spatial Behavior"], zoom, adjustedOffsetX, adjustedOffsetY);
+                    let rx = transformed.x;
+                    let ry = transformed.y;
+                    
+                    let geo = applyArchetypeGeometry(currentTraits["Archetype"], rx, ry);
+                    rx = geo.x;
+                    ry = geo.y;
+                    
+                    rx *= 1.2;
+                    ry *= 1.2;
+                    
+                    if (currentTraits["Spatial Behavior"] === "Asymmetrical") { rx += 0.4; ry -= 0.2; }
+                    if (currentTraits["Spatial Behavior"] === "FlowField") { rx += Math.sin(ry * 2.5) * 0.3; ry += Math.cos(rx * 2.5) * 0.3; }
+                    if (currentTraits["Spatial Behavior"] === "Vortex") {
+                        let vr = Math.sqrt(rx*rx + ry*ry);
+                        let va = Math.atan2(ry, rx);
+                        va += vr * 3.0;
+                        rx = Math.cos(va) * vr * 0.8;
+                        ry = Math.sin(va) * vr * 0.8;
+                    }
+                    
+                    if (isRupture) {
+                        let t_temp = canonicalTimeValue;
+                        rx += Math.sin(ry * 6 + t_temp * 4) * 0.15;
+                        ry += Math.cos(rx * 6 - t_temp * 4) * 0.15;
+                    }
+                    
+                    let fractalVal = getDepthFractalValue(rx, ry, maxIter, layers, iterMult);
+                    let patternVal = getPatternValue(rx, ry, frozenTime, engineConfig);
+                    
+                    let t;
+                    if (isRupture) {
+                        t = Math.abs(fractalVal - patternVal) + Math.sin(rx * ry * 2.5) * 0.2;
+                    } else if (isEcho) {
+                        t = fractalVal * 0.35 + patternVal * 0.65;
+                        t = t * 0.8 + Math.sin(t * Math.PI * 2) * 0.2;
+                        t = t * 0.8 + Math.sin(t * Math.PI * 2 + Math.sin(t * 6)) * 0.2;
+                    } else {
+                        t = fractalVal * 0.75 + patternVal * 0.25;
+                    }
+                    t = Math.max(0.03, Math.min(0.97, t));
+                    
+                    // GRAIL FIRST (before frequency)
+                    if (isGrailFlag && anomalyClass) {
+                        if (anomalyClass === "Interference") {
+                            if (engineConfig.name === "Canonical") {
+                                const t2 = Math.sin((fractalVal + patternVal) * Math.PI * 12 / 8);
+                                t = (t + ((t2 + 1) / 2)) * 0.5;
+                            } else if (engineConfig.name === "Echo") {
+                                const echoMix = Math.cos((fractalVal * 0.6 + patternVal * 1.4) * Math.PI * 2.5);
+                                t = t * 0.65 + ((echoMix + 1) / 2) * 0.35;
+                            } else {
+                                const t2 = Math.sin((fractalVal - patternVal) * Math.PI * 20);
+                                t = Math.abs(t - ((t2 + 1) / 2));
+                            }
+                        } else if (anomalyClass === "Collapse") {
+                            const rc = Math.sqrt((rx - 0.5) * (rx - 0.5) + (ry - 0.5) * (ry - 0.5));
+                            const collapse = Math.max(0, 1 - rc * 2);
+                            if (engineConfig.name === "Canonical") {
+                                t = t * (1 - collapse * 0.55);
+                            } else if (engineConfig.name === "Echo") {
+                                t = t * (1 - collapse * 0.35) + collapse * 0.15;
+                            } else {
+                                t = t * (1 - collapse * 0.85);
+                            }
+                        } else if (anomalyClass === "EchoLoop") {
+                            const rr = Math.sqrt(rx * rx + ry * ry);
+                            const ring = Math.sin(rr * 15) * 0.3;
+                            if (engineConfig.name === "Canonical") {
+                                t = t * 0.78 + ring * 0.22;
+                            } else if (engineConfig.name === "Echo") {
+                                const loop = Math.sin(rr * 9 + t * Math.PI * 4) * 0.5 + 0.5;
+                                t = t * 0.5 + loop * 0.5;
+                            } else {
+                                t = t * 0.6 + Math.abs(ring) * 0.4;
+                            }
+                        } else if (anomalyClass === "SpectralSplit") {
+                            t = Math.pow(t, engineConfig.name === "Rupture" ? 0.45 : 0.6);
+                        }
+                        t = Math.max(0.03, Math.min(0.97, t));
+                        t = Math.pow(t, engineConfig.name === "Rupture" ? 0.18 : 0.25);
+                    }
+                    
+                    // Frequency AFTER Grail
+                    let freqMultiplier;
+                    switch (freqIndex) {
+                        case 0: freqMultiplier = 3; break;
+                        case 1: freqMultiplier = 6; break;
+                        case 2: freqMultiplier = 10; break;
+                        default: freqMultiplier = 16; break;
+                    }
+                    t = engineFrequencyShape(t, engineConfig.name, freqMultiplier);
+                    t = Math.pow(t, 0.6);
+                    
+                    // FAILURE MODE RESPONSE
+                    let variation = Math.abs(fractalVal - patternVal);
+                    if (variation < 0.02) {
+                        t += (Math.sin(rx * 12.3 + ry * 7.1) * 0.5 + 0.5) * 0.12;
+                    }
+                    if (variation < 0.01) {
+                        const fallback = Math.sin(rx * 8 + ry * 8) * 0.5 + 0.5;
+                        if (failureMode === "Recovering") {
+                            if (engineConfig.name === "Canonical") {
+                                t = t * 0.65 + fallback * 0.35;
+                            } else if (engineConfig.name === "Echo") {
+                                t = t * 0.75 + fallback * 0.25;
+                            } else {
+                                t = t * 0.90 + fallback * 0.10;
+                            }
+                        } else if (failureMode === "Residual") {
+                            t = t * 0.88 + fallback * 0.12;
+                        } else if (failureMode === "VoidBloom") {
+                            const bloom = Math.exp(-(rx * rx + ry * ry) * 1.8);
+                            t = t * 0.7 + bloom * 0.3;
+                        } else if (failureMode === "Fracture") {
+                            const crack = Math.abs(Math.sin(rx * 18 - ry * 11));
+                            t = t * 0.6 + crack * 0.4;
+                        }
+                    }
+                    t = Math.max(0.03, Math.min(0.97, t));
+                    
+                    t = engineContrastShape(t, engineConfig.name);
+                    
+                    let { r, g, b } = getRichColor(t, currentTraits["Color Mood"] || "Neon", frozenTime, primaryDriver);
+                    
+                    let colorDisciplined = engineColorDiscipline(r, g, b, engineConfig.name, t, frozenTime);
+                    r = colorDisciplined.r;
+                    g = colorDisciplined.g;
+                    b = colorDisciplined.b;
+                    
+                    const sigColor = signatureColor(t, frozenTime);
+                    r = r * 0.65 + sigColor.r * 0.35;
+                    g = g * 0.65 + sigColor.g * 0.35;
+                    b = b * 0.65 + sigColor.b * 0.35;
+                    
+                    if (isGrailFlag && anomalyClass === "SpectralSplit") {
+                        if (engineConfig.name === "Canonical") {
+                            r = Math.min(1, r * 1.18);
+                            g = g * 0.78;
+                            b = Math.min(1, b * 1.08);
+                        } else if (engineConfig.name === "Echo") {
+                            r = r * 0.82 + (Math.sin(frozenTime + t * 10) * 0.5 + 0.5) * 0.28;
+                            g = g * 0.7;
+                            b = b * 0.82 + (Math.cos(frozenTime + t * 10) * 0.5 + 0.5) * 0.28;
+                        } else {
+                            r = Math.min(1, r * 1.35);
+                            g = g * 0.58;
+                            b = Math.min(1, b * 1.18);
+                        }
+                    }
+                    
+                    // Animation applied only in live mode
+                    if (!CANONICAL_MODE) {
+                        r = r * animatedPulse;
+                        g = g * animatedPulse;
+                        b = b * animatedPulse;
+                    }
+                    
+                    const idx = (y * w + x) * 4;
+                    data[idx] = Math.min(255, Math.max(0, Math.floor(r * 255)));
+                    data[idx+1] = Math.min(255, Math.max(0, Math.floor(g * 255)));
+                    data[idx+2] = Math.min(255, Math.max(0, Math.floor(b * 255)));
+                    data[idx+3] = 255;
+                }
+            }
+            
+            offCtx.putImageData(imgData, 0, 0);
+            ctx.clearRect(0, 0, 700, 700);
+            ctx.drawImage(offscreen, 0, 0, w, h, 0, 0, 700, 700);
+            
+            // Intensity effects only in live mode
+            if (!CANONICAL_MODE) {
+                applyIntensityEffects(ctx, 700, 700, liveIntensity, now);
+            }
+            
+        } catch(e) {
+            console.error("Render error:", e);
+        }
+    }
+    
+    function animate(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+        renderFrame(elapsed);
+        animationId = requestAnimationFrame(animate);
     }
     
     // ============================================================
@@ -527,105 +805,64 @@
     function init() {
         canvas = document.getElementById('artCanvas');
         if (!canvas) {
-            console.error("Canvas not found - creating one");
-            canvas = document.createElement('canvas');
-            canvas.id = 'artCanvas';
-            canvas.width = 700;
-            canvas.height = 700;
-            document.body.appendChild(canvas);
+            console.error("Canvas not found");
+            return;
         }
         
         canvas.width = 700;
         canvas.height = 700;
         ctx = canvas.getContext('2d');
         
-        // Get URL parameters
         const params = new URLSearchParams(window.location.search);
         tokenId = params.get('tokenId') || params.get('tid') || '1';
-        txHash = params.get('txHash') || params.get('h');
+        let txHash = params.get('txHash') || params.get('h');
         
-        // Check for freeze frame
-        const freezeParam = params.get('freeze');
-        if (freezeParam === 'true' || freezeParam === '1') {
-            window.FREEZE_FRAME = true;
-            console.log("❄️ FREEZE FRAME mode active - comparing mint output");
-        }
-        
-        console.log(`🎨 Art of Farcaster Viewer v28.6`);
-        console.log(`   Token: ${tokenId}`);
-        console.log(`   TX: ${txHash ? txHash.slice(0, 10) + '...' : 'MISSING'}`);
-        console.log(`   Debug Mode: ${DEBUG_MODE} (MUST BE FALSE)`);
-        console.log(`   Live Layer: ${ENABLE_LIVE_LAYER}`);
-        console.log(`   Freeze Frame: ${FREEZE_FRAME || false}`);
-        
-        // Render the canonical frame (consumes mint traits)
-        const success = renderCanonicalFrameAndDraw();
-        
-        if (!success) {
-            console.error("Failed to render canonical frame");
+        // Validate txHash - hard fail if missing
+        if (!txHash || txHash === "0x0") {
+            console.error("âŒ Missing txHash - cannot render canonical token");
+            ctx.fillStyle = '#ff4444';
+            ctx.font = '14px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('Error: Missing txHash', 350, 350);
             return;
         }
         
-        // Fetch live intensity if live layer enabled
-        if (ENABLE_LIVE_LAYER && !FREEZE_FRAME) {
+        console.log("Token:", tokenId, "TX:", txHash);
+        
+        masterSeed = getSeed(tokenId, txHash);
+        
+        const streamRNGs = {};
+        for(let i = 1; i <= 7; i++) streamRNGs[i] = splitSeed(masterSeed, i);
+        
+        const tokenOffset = parseInt(tokenId, 10) || 0;
+        const steps = (tokenOffset * 997) % 1000;
+        for (let i = 0; i < steps; i++) {
+            for(let s = 1; s <= 7; s++) if(streamRNGs[s]) streamRNGs[s]();
+        }
+        
+        const traitsRNG = streamRNGs[1];
+        const tokenNum = parseInt(tokenId) || 1;
+        
+        currentTraits = generateCollectionTraits(traitsRNG, tokenNum);
+        baseTraits = generateBaseTraits(masterSeed, tokenId);
+        
+        const intensityRand = makeSeededRand(masterSeed);
+        const deterministicIntensity = 0.2 + intensityRand() * 0.7;
+        deterministicPhase = getDeterministicPhase(masterSeed, deterministicIntensity);
+        canonicalTimeValue = deterministicTime(tokenId, masterSeed, deterministicIntensity);
+        
+        // Only fetch live intensity in non-canonical mode
+        if (!CANONICAL_MODE) {
             fetchIntensity();
             setInterval(fetchIntensity, 15000);
-            console.log("🟢 Pressure-based live layer active");
-        } else if (FREEZE_FRAME) {
-            console.log("❄️ Freeze frame active - no live intensity fetching");
-        } else {
-            console.log("🔒 Canonical-only mode active - exact mint match");
         }
         
-        // Start animation loop
         startTime = null;
-        frameCount = 0;
         animationId = requestAnimationFrame(animate);
         
-        // Handle window resize
-        window.addEventListener('resize', handleResize);
-        
-        // Create info div if it doesn't exist
-        if (!document.getElementById('complementaryInfo')) {
-            const infoDiv = document.createElement('div');
-            infoDiv.id = 'complementaryInfo';
-            infoDiv.style.position = 'fixed';
-            infoDiv.style.bottom = '10px';
-            infoDiv.style.left = '10px';
-            infoDiv.style.backgroundColor = 'rgba(0,0,0,0.75)';
-            infoDiv.style.color = '#ccc';
-            infoDiv.style.padding = '8px 12px';
-            infoDiv.style.fontFamily = 'monospace';
-            infoDiv.style.fontSize = '11px';
-            infoDiv.style.borderRadius = '4px';
-            infoDiv.style.zIndex = '1000';
-            infoDiv.style.backdropFilter = 'blur(4px)';
-            document.body.appendChild(infoDiv);
-        }
-        
-        if (!document.getElementById('tokenTitle')) {
-            const titleDiv = document.createElement('div');
-            titleDiv.id = 'tokenTitle';
-            titleDiv.style.position = 'fixed';
-            titleDiv.style.top = '10px';
-            titleDiv.style.left = '10px';
-            titleDiv.style.backgroundColor = 'rgba(0,0,0,0.75)';
-            titleDiv.style.color = 'white';
-            titleDiv.style.padding = '8px 12px';
-            titleDiv.style.fontFamily = 'monospace';
-            titleDiv.style.fontSize = '12px';
-            titleDiv.style.borderRadius = '4px';
-            titleDiv.style.zIndex = '1000';
-            titleDiv.style.backdropFilter = 'blur(4px)';
-            document.body.appendChild(titleDiv);
-        }
-        
-        console.log("✅ Viewer ready - determinism preserved");
+        console.log("Viewer ready - Token:", tokenId, "Canonical Mode:", CANONICAL_MODE);
     }
     
-    // ============================================================
-    // START
-    // ============================================================
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
